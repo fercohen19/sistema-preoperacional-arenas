@@ -1,21 +1,79 @@
+import Image from "next/image";
 import Link from "next/link";
 import { AppShell } from "@/components/app-shell";
-import { RoleHomeLinks } from "@/components/role-home-links";
 
 export default function HomePage() {
   return (
     <AppShell
-      title="Preoperacional y FUEC en una sola operacion"
-      subtitle="Base inicial para que el diligenciamiento sea en tiempo real, el PDF se genere automaticamente y el FUEC quede bloqueado cuando no exista inspeccion valida."
+      title="Preoperacional y FUEC"
+      subtitle="Preoperacional y FUEC en una sola operacion. Diligenciamiento en tiempo real y generacion automatica."
     >
-      <div className="stack-md">
-        <Link className="primary-button" href="/login">
-          Ingresar al sistema
-        </Link>
-        <RoleHomeLinks />
-        <Link className="secondary-button" href="/validar/DEMO-2026-000001">
-          Ver pagina de validacion
-        </Link>
+      <div className="stack-lg">
+        <section className="brand-hero">
+          <div className="brand-hero__header">
+            <div className="brand-hero__logo">
+              <Image
+                alt="Logo Arenas Transporte y Turismo"
+                height={86}
+                priority
+                src="/logo-arenas.png"
+                width={220}
+              />
+            </div>
+            <div className="brand-hero__copy">
+              <p className="brand-kicker">Arenas Transporte y Turismo</p>
+              <h2>Operacion digital en un solo flujo</h2>
+              <p>
+                El conductor diligencia el preoperacional, adjunta evidencias, firma
+                en pantalla y deja habilitado el FUEC solo cuando la inspeccion del
+                dia cumple las reglas del negocio.
+              </p>
+            </div>
+          </div>
+
+          <div className="brand-highlight">
+            <div className="brand-highlight__item">
+              <strong>Tiempo real</strong>
+              <span>Registro inmediato desde el celular.</span>
+            </div>
+            <div className="brand-highlight__item">
+              <strong>PDF automatico</strong>
+              <span>Soporte normativo generado en el cierre.</span>
+            </div>
+            <div className="brand-highlight__item">
+              <strong>FUEC controlado</strong>
+              <span>Solo se emite con preoperacional valido.</span>
+            </div>
+          </div>
+        </section>
+
+        <section className="home-actions-card">
+          <div className="home-actions-card__copy">
+            <p className="eyebrow">Acceso rapido</p>
+            <h2>Ingresa segun tu perfil</h2>
+            <p className="muted">
+              Conductores y administradores ingresan con sus credenciales y el
+              sistema muestra solo lo que corresponde a su rol.
+            </p>
+          </div>
+
+          <div className="home-actions-card__buttons">
+            <Link className="primary-button home-primary" href="/login">
+              Ingresar al sistema
+            </Link>
+            <div className="home-secondary-actions">
+              <Link className="secondary-button" href="/conductor">
+                Portal conductor
+              </Link>
+              <Link className="secondary-button" href="/admin">
+                Portal administrador
+              </Link>
+              <Link className="secondary-button" href="/validar/DEMO-2026-000001">
+                Validar documento
+              </Link>
+            </div>
+          </div>
+        </section>
       </div>
     </AppShell>
   );

@@ -54,7 +54,23 @@ export function LoginForm() {
           return;
         }
 
-        router.push(resolveRoleHome(role));
+        const {
+          data: { user }
+        } = await supabase.auth.getUser();
+
+        if (!user) {
+          setMessage("No fue posible recuperar el usuario autenticado.");
+          setLoading(false);
+          return;
+        }
+
+        const { data: appUser } = await supabase
+          .from("usuarios")
+          .select("rol")
+          .eq("auth_user_id", user.id)
+          .maybeSingle();
+
+        router.push(resolveRoleHome(appUser?.rol ?? role));
         router.refresh();
         setLoading(false);
       }}

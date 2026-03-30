@@ -12,7 +12,7 @@ export function AppShell({ title, subtitle, children }: AppShellProps) {
     <main className="page-shell">
       <MainNav />
       <section className="hero-card">
-        <p className="eyebrow">ARENAS Transporte</p>
+        <p className="eyebrow">Arenas Transporte y Turismo</p>
         <h1>{title}</h1>
         <p className="subtitle">{subtitle}</p>
       </section>

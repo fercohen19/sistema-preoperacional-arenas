@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { contractRecords, findContractByNumber } from "@/lib/contracts";
+import { useCurrentAppUser } from "@/lib/current-user";
 import { buildValidationUrl } from "@/lib/document-utils";
 import { saveFuec } from "@/lib/fuec";
 import { mockDrivers, mockVehicles } from "@/lib/mock-data";
@@ -81,13 +82,21 @@ export function FuecForm() {
   const [serviceDate, setServiceDate] = useState("");
   const [observations, setObservations] = useState("");
   const [previewCode, setPreviewCode] = useState("FUEC-2026-000001");
+  const { user: currentUser } = useCurrentAppUser();
   const selectedContract = useMemo(
     () => findContractByNumber(contractReference),
     [contractReference]
   );
+  const driverOptions = useMemo(() => {
+    if (currentUser?.rol === "conductor" && currentUser.documento) {
+      return drivers.filter((driver) => driver.documento === currentUser.documento);
+    }
+
+    return drivers;
+  }, [currentUser, drivers]);
   const selectedDriver = useMemo(
-    () => drivers.find((driver) => driver.documento === driverDocument) ?? null,
-    [drivers, driverDocument]
+    () => driverOptions.find((driver) => driver.documento === driverDocument) ?? null,
+    [driverDocument, driverOptions]
   );
   const licenseAlert = useMemo(
     () => getLicenseAlert(selectedDriver?.vigenciaLicencia ?? ""),
@@ -145,6 +154,12 @@ export function FuecForm() {
 
     void loadMasterData();
   }, []);
+
+  useEffect(() => {
+    if (currentUser?.rol === "conductor" && currentUser.documento) {
+      setDriverDocument(currentUser.documento);
+    }
+  }, [currentUser]);
 
   return (
     <form
@@ -207,10 +222,11 @@ export function FuecForm() {
           <span>Conductor</span>
           <select
             className="select-field"
+            disabled={currentUser?.rol === "conductor"}
             onChange={(event) => setDriverDocument(event.target.value)}
             value={driverDocument}
           >
-            {drivers.map((driver) => (
+            {driverOptions.map((driver) => (
               <option key={driver.documento} value={driver.documento}>
                 {driver.nombreCompleto}
               </option>

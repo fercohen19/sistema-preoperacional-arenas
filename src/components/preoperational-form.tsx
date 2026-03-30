@@ -6,6 +6,7 @@ import { checklistItems, requiredEvidence } from "@/lib/checklist";
 import { evaluateInspectionResult, missingRequiredEvidence } from "@/lib/inspection";
 import { savePreoperationalInspection } from "@/lib/preoperational";
 import { mockDrivers, mockVehicles } from "@/lib/mock-data";
+import { useCurrentAppUser } from "@/lib/current-user";
 import { supabase } from "@/lib/supabase";
 import type { EvidenceType, EvidenceUploadState } from "@/lib/types";
 
@@ -38,11 +39,19 @@ export function PreoperationalForm() {
   );
   const [kilometraje, setKilometraje] = useState("");
   const [observaciones, setObservaciones] = useState("");
+  const { user: currentUser } = useCurrentAppUser();
 
   const currentResult = useMemo(
     () => evaluateInspectionResult(itemValues),
     [itemValues]
   );
+  const driverOptions = useMemo(() => {
+    if (currentUser?.rol === "conductor" && currentUser.documento) {
+      return drivers.filter((driver) => driver.documento === currentUser.documento);
+    }
+
+    return drivers;
+  }, [currentUser, drivers]);
 
   useEffect(() => {
     async function loadMasterData() {
@@ -93,6 +102,12 @@ export function PreoperationalForm() {
 
     void loadMasterData();
   }, []);
+
+  useEffect(() => {
+    if (currentUser?.rol === "conductor" && currentUser.documento) {
+      setDriverDocument(currentUser.documento);
+    }
+  }, [currentUser]);
 
   const toggleEnumListValue = (itemCode: string, option: string) => {
     setItemValues((current) => {
@@ -196,10 +211,11 @@ export function PreoperationalForm() {
         <span>Conductor</span>
         <select
           className="select-field"
+          disabled={currentUser?.rol === "conductor"}
           onChange={(event) => setDriverDocument(event.target.value)}
           value={driverDocument}
         >
-          {drivers.map((driver) => (
+          {driverOptions.map((driver) => (
             <option key={driver.documento} value={driver.documento}>
               {driver.nombreCompleto}
             </option>
