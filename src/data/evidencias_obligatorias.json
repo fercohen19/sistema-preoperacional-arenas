@@ -1,0 +1,27 @@
+[
+  {
+    "codigo": "FOTO_FRONTAL",
+    "nombre": "Foto frontal",
+    "obligatorio": true
+  },
+  {
+    "codigo": "FOTO_TRASERA",
+    "nombre": "Foto trasera",
+    "obligatorio": true
+  },
+  {
+    "codigo": "FOTO_TABLERO_KM",
+    "nombre": "Foto tablero kilometraje",
+    "obligatorio": true
+  },
+  {
+    "codigo": "FOTO_ELEMENTOS_SEGURIDAD",
+    "nombre": "Foto elementos de seguridad",
+    "obligatorio": true
+  },
+  {
+    "codigo": "FIRMA_CONDUCTOR",
+    "nombre": "Firma del conductor",
+    "obligatorio": true
+  }
+]

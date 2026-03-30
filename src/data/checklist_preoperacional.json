@@ -1,0 +1,173 @@
+[
+  {
+    "codigo": "presentacion_aseo",
+    "nombre": "Presentacion (Aseo)",
+    "tipo": "estado",
+    "opciones": ["Bueno", "Regular", "Malo"],
+    "critico": false,
+    "obligatorio": true
+  },
+  {
+    "codigo": "aire_acondicionado",
+    "nombre": "Aire Acondicionado",
+    "tipo": "estado",
+    "opciones": ["Bueno", "Regular", "Malo", "No aplica"],
+    "critico": false,
+    "obligatorio": true
+  },
+  {
+    "codigo": "tomas_corriente",
+    "nombre": "Tomas corriente",
+    "tipo": "estado",
+    "opciones": ["Bueno", "Regular", "Malo", "No aplica"],
+    "critico": false,
+    "obligatorio": true
+  },
+  {
+    "codigo": "nivel_agua",
+    "nombre": "Nivel de agua",
+    "tipo": "estado",
+    "opciones": ["Bueno", "Regular", "Malo"],
+    "critico": true,
+    "obligatorio": true
+  },
+  {
+    "codigo": "tablero",
+    "nombre": "Tablero",
+    "tipo": "estado",
+    "opciones": ["Bueno", "Regular", "Malo"],
+    "critico": true,
+    "obligatorio": true
+  },
+  {
+    "codigo": "limpiabrisas",
+    "nombre": "Limpiabrisas",
+    "tipo": "estado",
+    "opciones": ["Bueno", "Regular", "Malo"],
+    "critico": false,
+    "obligatorio": true
+  },
+  {
+    "codigo": "retrovisor_derecho",
+    "nombre": "Retrovisor lateral derecho",
+    "tipo": "estado",
+    "opciones": ["Bueno", "Regular", "Malo"],
+    "critico": true,
+    "obligatorio": true
+  },
+  {
+    "codigo": "retrovisor_izquierdo",
+    "nombre": "Retrovisor lateral izquierdo",
+    "tipo": "estado",
+    "opciones": ["Bueno", "Regular", "Malo"],
+    "critico": true,
+    "obligatorio": true
+  },
+  {
+    "codigo": "cinturones_seguridad",
+    "nombre": "Cinturones de seguridad",
+    "tipo": "estado",
+    "opciones": ["Bueno", "Regular", "Malo"],
+    "critico": true,
+    "obligatorio": true
+  },
+  {
+    "codigo": "vidrio_frontal",
+    "nombre": "Vidrio frontal",
+    "tipo": "estado",
+    "opciones": ["Bueno", "Regular", "Malo"],
+    "critico": true,
+    "obligatorio": true
+  },
+  {
+    "codigo": "ajuste_pernos_llanta",
+    "nombre": "Ajuste de los pernos de cada llanta",
+    "tipo": "texto_corto",
+    "critico": true,
+    "obligatorio": true
+  },
+  {
+    "codigo": "llantas",
+    "nombre": "Llantas",
+    "tipo": "estado",
+    "opciones": ["Bueno", "Regular", "Malo"],
+    "critico": true,
+    "obligatorio": true
+  },
+  {
+    "codigo": "luces_altas",
+    "nombre": "Luces altas",
+    "tipo": "estado",
+    "opciones": ["Bueno", "Regular", "Malo"],
+    "critico": true,
+    "obligatorio": true
+  },
+  {
+    "codigo": "luces_medias",
+    "nombre": "Luces medias",
+    "tipo": "estado",
+    "opciones": ["Bueno", "Regular", "Malo"],
+    "critico": true,
+    "obligatorio": true
+  },
+  {
+    "codigo": "luces_parqueo",
+    "nombre": "Luces de parqueo",
+    "tipo": "estado",
+    "opciones": ["Bueno", "Regular", "Malo"],
+    "critico": true,
+    "obligatorio": true
+  },
+  {
+    "codigo": "luz_freno",
+    "nombre": "Luz de freno",
+    "tipo": "estado",
+    "opciones": ["Bueno", "Regular", "Malo"],
+    "critico": true,
+    "obligatorio": true
+  },
+  {
+    "codigo": "direccionales",
+    "nombre": "Direccionales",
+    "tipo": "estado",
+    "opciones": ["Bueno", "Regular", "Malo"],
+    "critico": true,
+    "obligatorio": true
+  },
+  {
+    "codigo": "frenos",
+    "nombre": "Frenos",
+    "tipo": "estado",
+    "opciones": ["Bueno", "Regular", "Malo"],
+    "critico": true,
+    "obligatorio": true
+  },
+  {
+    "codigo": "equipo_carretera",
+    "nombre": "Equipo de carretera",
+    "tipo": "enumlist",
+    "opciones": [
+      "Extintor",
+      "Conos reflectivos",
+      "Caja de herramientas",
+      "Guantes de lona",
+      "Tacos (2)",
+      "Gato para elevar",
+      "Chaleco reflectivo",
+      "Cruceta",
+      "Señal triangular (2)",
+      "Linterna",
+      "Cable de iniciar"
+    ],
+    "critico": true,
+    "obligatorio": true
+  },
+  {
+    "codigo": "botiquin",
+    "nombre": "Botiquin",
+    "tipo": "estado",
+    "opciones": ["Bueno", "Regular", "Malo"],
+    "critico": true,
+    "obligatorio": true
+  }
+]
