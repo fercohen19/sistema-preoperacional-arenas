@@ -23,4 +23,3 @@ Base inicial del aplicativo de preoperacional y FUEC para ARENAS Transporte.
 4. Crear proyecto Supabase
 5. Ejecutar el esquema SQL
 6. Ejecutar `npm run dev`
-7. Desplieqgue
