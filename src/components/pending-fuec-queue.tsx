@@ -11,6 +11,7 @@ type InspectionPendingRecord = {
   fecha_hora_cierre: string | null;
   resultado: string | null;
   kilometraje: number;
+  creador: { nombre_completo: string } | null;
   vehiculos: { placa: string; tipo_vehiculo: string } | null;
   conductores: { nombre_completo: string; documento: string } | null;
 };
@@ -54,7 +55,7 @@ export function PendingFuecQueue() {
           supabase
             .from("inspecciones_preoperacionales")
             .select(
-              "id, codigo, fecha_operacion, fecha_hora_cierre, resultado, kilometraje, vehiculos(placa, tipo_vehiculo), conductores(nombre_completo, documento)"
+              "id, codigo, fecha_operacion, fecha_hora_cierre, resultado, kilometraje, vehiculos(placa, tipo_vehiculo), conductores(nombre_completo, documento), creador:usuarios!inspecciones_preoperacionales_creada_por_fkey(nombre_completo)"
             )
             .eq("fecha_operacion", today)
             .eq("cerrada", true)
@@ -85,6 +86,9 @@ export function PendingFuecQueue() {
           fecha_hora_cierre: inspection.fecha_hora_cierre,
           resultado: inspection.resultado,
           kilometraje: inspection.kilometraje,
+          creador: Array.isArray(inspection.creador)
+            ? (inspection.creador[0] ?? null)
+            : inspection.creador,
           vehiculos: Array.isArray(inspection.vehiculos)
             ? (inspection.vehiculos[0] ?? null)
             : inspection.vehiculos,
@@ -143,6 +147,9 @@ export function PendingFuecQueue() {
                   <p className="muted">
                     Doc. {inspection.conductores?.documento ?? "Sin documento"} | KM{" "}
                     {inspection.kilometraje}
+                  </p>
+                  <p className="muted">
+                    Diligenciado por: {inspection.creador?.nombre_completo ?? "Sin trazabilidad"}
                   </p>
                 </div>
                 <div>

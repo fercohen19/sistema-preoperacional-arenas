@@ -15,6 +15,7 @@ type InspectionRecord = {
   cerrada: boolean;
   pdf_url: string | null;
   codigo_verificacion: string | null;
+  creador: { nombre_completo: string } | null;
   vehiculos: { placa: string; tipo_vehiculo: string } | null;
   conductores: { nombre_completo: string; documento: string } | null;
 };
@@ -29,6 +30,7 @@ type FuecRecord = {
   estado: string;
   pdf_url: string | null;
   codigo_verificacion: string | null;
+  emisor: { nombre_completo: string } | null;
   vehiculos: { placa: string; tipo_vehiculo: string } | null;
   conductores: { nombre_completo: string; documento: string } | null;
 };
@@ -183,14 +185,14 @@ export function AdminOperationsPanel() {
           supabase
             .from("inspecciones_preoperacionales")
             .select(
-              "id, codigo, fecha_operacion, fecha_hora_cierre, kilometraje, resultado, cerrada, pdf_url, codigo_verificacion, vehiculos(placa, tipo_vehiculo), conductores(nombre_completo, documento)"
+              "id, codigo, fecha_operacion, fecha_hora_cierre, kilometraje, resultado, cerrada, pdf_url, codigo_verificacion, creador:usuarios!inspecciones_preoperacionales_creada_por_fkey(nombre_completo), vehiculos(placa, tipo_vehiculo), conductores(nombre_completo, documento)"
             )
             .order("created_at", { ascending: false })
             .limit(300),
           supabase
             .from("fuecs")
             .select(
-              "id, consecutivo, fecha_emision, fecha_servicio, contrato_referencia, inspeccion_id, estado, pdf_url, codigo_verificacion, vehiculos(placa, tipo_vehiculo), conductores(nombre_completo, documento)"
+              "id, consecutivo, fecha_emision, fecha_servicio, contrato_referencia, inspeccion_id, estado, pdf_url, codigo_verificacion, emisor:usuarios!fuecs_emitido_por_fkey(nombre_completo), vehiculos(placa, tipo_vehiculo), conductores(nombre_completo, documento)"
             )
             .order("created_at", { ascending: false })
             .limit(300)
@@ -218,6 +220,7 @@ export function AdminOperationsPanel() {
         cerrada: inspection.cerrada,
         pdf_url: inspection.pdf_url,
         codigo_verificacion: inspection.codigo_verificacion,
+        creador: Array.isArray(inspection.creador) ? (inspection.creador[0] ?? null) : inspection.creador,
         vehiculos: Array.isArray(inspection.vehiculos) ? (inspection.vehiculos[0] ?? null) : inspection.vehiculos,
         conductores: Array.isArray(inspection.conductores)
           ? (inspection.conductores[0] ?? null)
@@ -234,6 +237,7 @@ export function AdminOperationsPanel() {
         estado: fuec.estado,
         pdf_url: fuec.pdf_url,
         codigo_verificacion: fuec.codigo_verificacion,
+        emisor: Array.isArray(fuec.emisor) ? (fuec.emisor[0] ?? null) : fuec.emisor,
         vehiculos: Array.isArray(fuec.vehiculos) ? (fuec.vehiculos[0] ?? null) : fuec.vehiculos,
         conductores: Array.isArray(fuec.conductores)
           ? (fuec.conductores[0] ?? null)
@@ -605,6 +609,9 @@ export function AdminOperationsPanel() {
                     <p className="muted">
                       Contratante: {inspection.contractors.join(" | ") || "Sin FUEC asociado"}
                     </p>
+                    <p className="muted">
+                      Diligenciado por: {inspection.creador?.nombre_completo ?? "Sin trazabilidad"}
+                    </p>
                   </div>
                   <div className="admin-history-meta">
                     <span className="status-pill">{inspection.resultado ?? "PENDIENTE"}</span>
@@ -742,6 +749,9 @@ export function AdminOperationsPanel() {
                     </p>
                     <p className="muted">
                       Contratante: {fuec.contractorName || "Sin contratante"}
+                    </p>
+                    <p className="muted">
+                      Emitido por: {fuec.emisor?.nombre_completo ?? "Sin trazabilidad"}
                     </p>
                   </div>
                   <div className="admin-history-meta">
