@@ -355,5 +355,22 @@
     "Fecha de inicio contrato": "03 de abril 2026",
     "Lugar de recogida": "CALLE 7 # 21-55 LA LUZ",
     "Valor del contrato": 1500000
-  }
+  },
+  {
+  "Numero contrato": "0067",
+    "Nombre suscrito contrato": "MARIA CRISTINA RODRIGUEZ SANCHEZ",
+    "No. Documento": 22618445,
+    "Correo": "notiene@gmail.com",
+    "Teléfono": 3023721478,
+    "Dirección": "Tienda el triangulo de la ciudadela",
+    "Detalle recorrido": "Ida y vuelta Barranquilla - Isla Barú",
+    "Personas que se transportaran": "10 personas",
+    "Vehiculo asignado": "Renaul Master modelo 2023",
+    "Conductor asignado": "JOFRAN LEANDRO BAYONA QUINTERO",
+    "Documento conductor": 1095790211,
+    "Días de contrato": 1,
+    "Fecha de inicio contrato": "02 de abril 2026",
+    "Lugar de recogida": "Tienda el triangulo de la ciudadela",
+    "Valor del contrato": 1200000
+    }
 ]
