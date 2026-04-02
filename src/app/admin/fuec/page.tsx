@@ -1,7 +1,7 @@
 import { AppShell } from "@/components/app-shell";
 import { AuthGuard } from "@/components/auth-guard";
 import { FuecForm } from "@/components/fuec-form";
-import { RecentInspections } from "@/components/recent-inspections";
+import { PendingFuecQueue } from "@/components/pending-fuec-queue";
 
 export default function AdminFuecPage() {
   return (
@@ -11,8 +11,8 @@ export default function AdminFuecPage() {
     >
       <AuthGuard requiredRole="administrador">
         <div className="stack-lg">
+          <PendingFuecQueue />
           <FuecForm />
-          <RecentInspections />
         </div>
       </AuthGuard>
     </AppShell>
