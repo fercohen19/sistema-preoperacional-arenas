@@ -149,76 +149,78 @@ export function DriverFuecDownloads() {
   }, [loading, user]);
 
   return (
-    <article className="table-card">
-      <div className="table-card__header">
+    <details className="table-card documents-drawer">
+      <summary className="documents-drawer__summary">
         <div>
           <p className="eyebrow">Documentos</p>
           <h2>Mis FUEC emitidos</h2>
         </div>
-        <p className="muted">Solo se muestran los asociados a tu documento.</p>
+        <span className="muted">Abrir solo cuando necesites descargar o validar.</span>
+      </summary>
+
+      <div className="documents-drawer__content">
+        {isLoading ? <p className="muted">Consultando FUEC emitidos...</p> : null}
+        {!isLoading && message ? <p className="admin-alert admin-alert--danger">{message}</p> : null}
+        {!isLoading && !message && records.length === 0 ? (
+          <p className="muted">
+            Aun no hay FUEC emitidos para este conductor. La emision la realiza administracion y
+            cuando quede generado aparecera aqui para abrirlo o descargarlo.
+          </p>
+        ) : null}
+
+        {!isLoading && records.length > 0 ? (
+          <div className="admin-history-list">
+            {records.map((record) => {
+              const pdfPath = extractStoragePath(record.pdf_url);
+              const pdfHref = pdfPath ? signedUrls[pdfPath] : "";
+
+              return (
+                <div className="admin-history-row" key={record.id}>
+                  <div className="admin-history-main">
+                    <strong>{record.consecutivo}</strong>
+                    <p className="muted">
+                      Contrato {record.contrato_referencia ?? "Sin referencia"} |{" "}
+                      {record.vehiculos?.placa ?? "Sin placa"}
+                    </p>
+                    <p className="muted">
+                      Servicio {formatDate(record.fecha_servicio)} | Emision{" "}
+                      {formatDateTime(record.fecha_emision)}
+                    </p>
+                  </div>
+                  <div className="admin-history-meta">
+                    <span className="status-pill">{record.estado}</span>
+                  </div>
+                  <div className="admin-history-actions">
+                    {record.codigo_verificacion ? (
+                      <a
+                        className="secondary-button admin-link-button"
+                        href={buildValidationUrl(record.codigo_verificacion)}
+                        rel="noreferrer"
+                        target="_blank"
+                      >
+                        Validar
+                      </a>
+                    ) : null}
+                    {pdfHref ? (
+                      <a
+                        className="primary-button admin-link-button"
+                        download={`${record.consecutivo}.pdf`}
+                        href={pdfHref}
+                        rel="noreferrer"
+                        target="_blank"
+                      >
+                        Descargar PDF
+                      </a>
+                    ) : (
+                      <span className="muted">PDF pendiente</span>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        ) : null}
       </div>
-
-      {isLoading ? <p className="muted">Consultando FUEC emitidos...</p> : null}
-      {!isLoading && message ? <p className="admin-alert admin-alert--danger">{message}</p> : null}
-      {!isLoading && !message && records.length === 0 ? (
-        <p className="muted">
-          Aun no hay FUEC emitidos para este conductor. La emision la realiza administracion y
-          cuando quede generado aparecera aqui para abrirlo o descargarlo.
-        </p>
-      ) : null}
-
-      {!isLoading && records.length > 0 ? (
-        <div className="admin-history-list">
-          {records.map((record) => {
-            const pdfPath = extractStoragePath(record.pdf_url);
-            const pdfHref = pdfPath ? signedUrls[pdfPath] : "";
-
-            return (
-              <div className="admin-history-row" key={record.id}>
-                <div className="admin-history-main">
-                  <strong>{record.consecutivo}</strong>
-                  <p className="muted">
-                    Contrato {record.contrato_referencia ?? "Sin referencia"} |{" "}
-                    {record.vehiculos?.placa ?? "Sin placa"}
-                  </p>
-                  <p className="muted">
-                    Servicio {formatDate(record.fecha_servicio)} | Emision{" "}
-                    {formatDateTime(record.fecha_emision)}
-                  </p>
-                </div>
-                <div className="admin-history-meta">
-                  <span className="status-pill">{record.estado}</span>
-                </div>
-                <div className="admin-history-actions">
-                  {record.codigo_verificacion ? (
-                    <a
-                      className="secondary-button admin-link-button"
-                      href={buildValidationUrl(record.codigo_verificacion)}
-                      rel="noreferrer"
-                      target="_blank"
-                    >
-                      Validar
-                    </a>
-                  ) : null}
-                  {pdfHref ? (
-                    <a
-                      className="primary-button admin-link-button"
-                      download={`${record.consecutivo}.pdf`}
-                      href={pdfHref}
-                      rel="noreferrer"
-                      target="_blank"
-                    >
-                      Descargar PDF
-                    </a>
-                  ) : (
-                    <span className="muted">PDF pendiente</span>
-                  )}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      ) : null}
-    </article>
+    </details>
   );
 }

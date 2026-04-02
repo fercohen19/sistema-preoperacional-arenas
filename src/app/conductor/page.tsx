@@ -18,8 +18,8 @@ export default function DriverDashboardPage() {
             description="El resultado ya se calcula en pantalla y se valida que existan evidencias obligatorias. Lo siguiente es persistir los datos y emitir el PDF automaticamente."
           />
           <DashboardCards />
-          <DriverFuecDownloads />
           <PreoperationalForm />
+          <DriverFuecDownloads />
         </div>
       </AuthGuard>
     </AppShell>
