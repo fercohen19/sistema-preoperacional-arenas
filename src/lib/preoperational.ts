@@ -93,6 +93,7 @@ export async function savePreoperationalInspection(params: {
   resultado: InspectionResult;
   itemValues: Record<string, string>;
   evidenceValues: Partial<Record<EvidenceType, EvidenceUploadState>>;
+  onProgress?: (message: string) => void;
 }) {
   if (!supabase) {
     throw new Error("Supabase no esta configurado.");
@@ -102,11 +103,18 @@ export async function savePreoperationalInspection(params: {
     placa,
     conductorDocumento,
     kilometraje,
+    onProgress,
     observaciones,
     resultado,
     itemValues,
     evidenceValues
   } = params;
+
+  const reportProgress = (message: string) => {
+    onProgress?.(message);
+  };
+
+  reportProgress("Validando vehiculo, conductor y sesion...");
 
   const [
     { data: vehicle, error: vehicleError },
@@ -206,6 +214,8 @@ export async function savePreoperationalInspection(params: {
     throw inspectionError;
   }
 
+  reportProgress("Inspeccion guardada. Registrando checklist y evidencias...");
+
   const itemsPayload = checklistItems.map((item) => ({
     inspeccion_id: inspectionId,
     item_codigo: item.codigo,
@@ -265,58 +275,75 @@ export async function savePreoperationalInspection(params: {
     throw documentError;
   }
 
-  const pdfBytes = await generatePreoperationalPdf({
-    code,
-    verificationCode,
-    vehicle: {
-      placa: vehicle.placa,
-      tipoVehiculo: vehicle.tipo_vehiculo ?? "Vehiculo",
-      propietarioAfiliado: vehicle.propietario_afiliado ?? ""
-    },
-    driver: {
-      documento: driver.documento,
-      nombreCompleto: driver.nombre_completo ?? driver.documento
-    },
-    kilometraje,
-    observaciones,
-    resultado,
-    itemValues,
-    evidenceValues,
-    fechaOperacion: dateOnly
-  });
+  let pdfPath: string | null = null;
+  let pdfGenerated = false;
+  let pdfErrorMessage: string | null = null;
 
-  const pdfPath = await uploadPdfDocument({
-    inspectionId,
-    pdfBytes
-  });
+  try {
+    reportProgress("Generando PDF del preoperacional...");
 
-  const { error: pdfUpdateError } = await supabase
-    .from("inspecciones_preoperacionales")
-    .update({
-      pdf_url: `documentos/${pdfPath}`,
-      updated_at: new Date().toISOString()
-    })
-    .eq("id", inspectionId);
+    const pdfBytes = await generatePreoperationalPdf({
+      code,
+      verificationCode,
+      vehicle: {
+        placa: vehicle.placa,
+        tipoVehiculo: vehicle.tipo_vehiculo ?? "Vehiculo",
+        propietarioAfiliado: vehicle.propietario_afiliado ?? ""
+      },
+      driver: {
+        documento: driver.documento,
+        nombreCompleto: driver.nombre_completo ?? driver.documento
+      },
+      kilometraje,
+      observaciones,
+      resultado,
+      itemValues,
+      evidenceValues,
+      fechaOperacion: dateOnly
+    });
 
-  if (pdfUpdateError) {
-    throw pdfUpdateError;
-  }
+    reportProgress("Subiendo PDF generado...");
 
-  const { error: documentUpdateError } = await supabase
-    .from("documentos_verificables")
-    .update({
-      pdf_url: `documentos/${pdfPath}`
-    })
-    .eq("codigo_verificacion", verificationCode);
+    pdfPath = await uploadPdfDocument({
+      inspectionId,
+      pdfBytes
+    });
 
-  if (documentUpdateError) {
-    throw documentUpdateError;
+    const { error: pdfUpdateError } = await supabase
+      .from("inspecciones_preoperacionales")
+      .update({
+        pdf_url: `documentos/${pdfPath}`,
+        updated_at: new Date().toISOString()
+      })
+      .eq("id", inspectionId);
+
+    if (pdfUpdateError) {
+      throw pdfUpdateError;
+    }
+
+    const { error: documentUpdateError } = await supabase
+      .from("documentos_verificables")
+      .update({
+        pdf_url: `documentos/${pdfPath}`
+      })
+      .eq("codigo_verificacion", verificationCode);
+
+    if (documentUpdateError) {
+      throw documentUpdateError;
+    }
+
+    pdfGenerated = true;
+  } catch (error) {
+    pdfErrorMessage =
+      error instanceof Error ? error.message : "No fue posible generar el PDF en este intento.";
   }
 
   return {
     inspectionId,
     code,
     verificationCode,
+    pdfGenerated,
+    pdfErrorMessage,
     pdfPath
   };
 }

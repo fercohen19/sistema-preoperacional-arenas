@@ -1,6 +1,6 @@
 import Image from "next/image";
-import Link from "next/link";
 import { AppShell } from "@/components/app-shell";
+import { HomeEntryActions } from "@/components/home-entry-actions";
 
 export default function HomePage() {
   return (
@@ -57,22 +57,7 @@ export default function HomePage() {
             </p>
           </div>
 
-          <div className="home-actions-card__buttons">
-            <Link className="primary-button home-primary" href="/login">
-              Ingresar al sistema
-            </Link>
-            <div className="home-secondary-actions">
-              <Link className="secondary-button" href="/conductor">
-                Portal conductor
-              </Link>
-              <Link className="secondary-button" href="/admin">
-                Portal administrador
-              </Link>
-              <Link className="secondary-button" href="/validar/DEMO-2026-000001">
-                Validar documento
-              </Link>
-            </div>
-          </div>
+          <HomeEntryActions />
         </section>
       </div>
     </AppShell>

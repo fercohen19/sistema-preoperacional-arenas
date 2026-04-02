@@ -1,6 +1,7 @@
 import { AppShell } from "@/components/app-shell";
 import { AuthGuard } from "@/components/auth-guard";
 import { DashboardCards } from "@/components/dashboard-cards";
+import { DriverFuecDownloads } from "@/components/driver-fuec-downloads";
 import { PreoperationalForm } from "@/components/preoperational-form";
 import { SystemBanner } from "@/components/system-banner";
 
@@ -17,6 +18,7 @@ export default function DriverDashboardPage() {
             description="El resultado ya se calcula en pantalla y se valida que existan evidencias obligatorias. Lo siguiente es persistir los datos y emitir el PDF automaticamente."
           />
           <DashboardCards />
+          <DriverFuecDownloads />
           <PreoperationalForm />
         </div>
       </AuthGuard>

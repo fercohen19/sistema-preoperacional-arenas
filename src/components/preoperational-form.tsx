@@ -148,6 +148,7 @@ export function PreoperationalForm() {
 
         try {
           setIsSubmitting(true);
+          setStatusMessage("Iniciando cierre del preoperacional...");
 
           const saved = await savePreoperationalInspection({
             placa: plate,
@@ -156,12 +157,19 @@ export function PreoperationalForm() {
             observaciones,
             resultado: currentResult,
             itemValues,
-            evidenceValues
+            evidenceValues,
+            onProgress: (message) => setStatusMessage(message)
           });
 
-          setStatusMessage(
-            `Inspeccion guardada en Supabase con codigo ${saved.code}. El PDF fue generado y almacenado correctamente.`
-          );
+          if (saved.pdfGenerated) {
+            setStatusMessage(
+              `Inspeccion guardada en Supabase con codigo ${saved.code}. El PDF fue generado y almacenado correctamente.`
+            );
+          } else {
+            setStatusMessage(
+              `La inspeccion quedo guardada con codigo ${saved.code}, pero el PDF quedo pendiente. ${saved.pdfErrorMessage ?? "Conviene reintentarlo o revisarlo desde administracion."}`
+            );
+          }
         } catch (error) {
           const message = (() => {
             if (error instanceof Error) {
@@ -381,7 +389,7 @@ export function PreoperationalForm() {
         <button className="secondary-button" type="button">
           Guardar borrador
         </button>
-        <button className="primary-button" type="submit">
+        <button className="primary-button" disabled={isSubmitting} type="submit">
           {isSubmitting ? "Guardando inspeccion..." : "Cerrar inspeccion y generar PDF"}
         </button>
       </div>
