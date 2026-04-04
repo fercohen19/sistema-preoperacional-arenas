@@ -180,16 +180,20 @@ export async function savePreoperationalInspection(params: {
     );
   }
 
-  const { count: sameDayCount, error: countError } = await supabase
-    .from("inspecciones_preoperacionales")
-    .select("*", { count: "exact", head: true })
-    .eq("fecha_operacion", dateOnly);
+  const { data: nextSequence, error: sequenceError } = await supabase.rpc(
+    "generar_siguiente_numero_documento",
+    {
+      p_documento: "PREOPERACIONAL",
+      p_anio: Number(year),
+      p_prefijo: "GLOBAL"
+    }
+  );
 
-  if (countError) {
-    throw countError;
+  if (sequenceError) {
+    throw sequenceError;
   }
 
-  const sequence = String((sameDayCount ?? 0) + 1).padStart(3, "0");
+  const sequence = String(nextSequence).padStart(3, "0");
   const code = `PO-${year}-${day}${month}${sequence}`;
 
   const { error: inspectionError } = await supabase

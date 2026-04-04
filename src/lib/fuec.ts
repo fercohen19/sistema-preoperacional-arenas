@@ -681,16 +681,20 @@ export async function saveFuec(params: {
   }
 
   const prefix = `208518525${year}${contract.numeroContrato}`;
-  const { count: samePrefixCount, error: samePrefixError } = await supabase
-    .from("fuecs")
-    .select("*", { count: "exact", head: true })
-    .like("consecutivo", `${prefix}%`);
+  const { data: nextSequence, error: sequenceError } = await supabase.rpc(
+    "generar_siguiente_numero_documento",
+    {
+      p_documento: "FUEC",
+      p_anio: Number(year),
+      p_prefijo: "GLOBAL"
+    }
+  );
 
-  if (samePrefixError) {
-    throw samePrefixError;
+  if (sequenceError) {
+    throw sequenceError;
   }
 
-  const consecutivoData = `${prefix}${String((samePrefixCount ?? 0) + 1).padStart(4, "0")}`;
+  const consecutivoData = `${prefix}${String(nextSequence).padStart(4, "0")}`;
   const verificationCode = crypto.randomUUID().replaceAll("-", "");
   const fuecId = crypto.randomUUID();
   let emitterId: string | null = null;
