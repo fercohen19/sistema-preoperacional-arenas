@@ -169,6 +169,7 @@ async function generateFuecPdf(params: {
     empresa: Uint8Array<ArrayBufferLike>;
     ministerio: Uint8Array<ArrayBufferLike>;
     supertransporte: Uint8Array<ArrayBufferLike>;
+    anexoObligatorio: Uint8Array<ArrayBufferLike>;
   };
   placa: string;
   tipoVehiculo: string;
@@ -567,6 +568,14 @@ async function generateFuecPdf(params: {
     }
   );
 
+  const anexoDoc = await PDFDocument.load(params.logos.anexoObligatorio);
+  const anexoPageIndices = anexoDoc.getPageIndices();
+  const copiedPages = await pdfDoc.copyPages(anexoDoc, anexoPageIndices);
+
+  for (const copiedPage of copiedPages) {
+    pdfDoc.addPage(copiedPage);
+  }
+
   return pdfDoc.save();
 }
 
@@ -742,6 +751,12 @@ export async function saveFuec(params: {
   const companyLogo = await fetch("/fuec-logos/empresa.png").then((r) => r.arrayBuffer());
   const ministryLogo = await fetch("/fuec-logos/mintransporte.png").then((r) => r.arrayBuffer());
   const superLogo = await fetch("/fuec-logos/supertransporte.png").then((r) => r.arrayBuffer());
+  const mandatoryAppendix = await fetch("/fuec-anexo-obligatorio.pdf").then((r) => {
+    if (!r.ok) {
+      throw new Error("No fue posible cargar el anexo obligatorio del FUEC.");
+    }
+    return r.arrayBuffer();
+  });
 
   const pdfBytes = await generateFuecPdf({
     consecutivo: consecutivoData,
@@ -749,7 +764,8 @@ export async function saveFuec(params: {
     logos: {
       empresa: new Uint8Array(companyLogo),
       ministerio: new Uint8Array(ministryLogo),
-      supertransporte: new Uint8Array(superLogo)
+      supertransporte: new Uint8Array(superLogo),
+      anexoObligatorio: new Uint8Array(mandatoryAppendix)
     },
     placa: vehicle.placa,
     tipoVehiculo: vehicle.tipo_vehiculo,
