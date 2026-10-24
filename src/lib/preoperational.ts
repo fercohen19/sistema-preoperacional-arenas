@@ -1,6 +1,7 @@
 import { buildValidationUrl } from "./document-utils";
 import { checklistItems } from "./checklist";
 import { getBogotaDate, getBogotaDateCodeParts } from "./date-utils";
+import { normalizeEvidenceImage } from "./image-normalization";
 import { generatePreoperationalPdf } from "./pdf";
 import { supabase } from "./supabase";
 import type {
@@ -77,6 +78,50 @@ async function uploadEvidenceFile(params: {
     bucket,
     path: filePath
   };
+}
+
+export async function replaceInspectionEvidence(params: {
+  inspectionId: string;
+  evidenceType: Exclude<EvidenceType, "FIRMA_CONDUCTOR">;
+  evidence: EvidenceUploadState;
+}) {
+  if (!supabase) {
+    throw new Error("Supabase no esta configurado.");
+  }
+
+  const uploaded = await uploadEvidenceFile({
+    inspectionId: params.inspectionId,
+    evidenceType: params.evidenceType,
+    evidence: params.evidence
+  });
+  const storagePath = `${uploaded.bucket}/${uploaded.path}`;
+  const { data: existingEvidence, error: existingError } = await supabase
+    .from("inspeccion_evidencias")
+    .select("id")
+    .eq("inspeccion_id", params.inspectionId)
+    .eq("tipo", params.evidenceType)
+    .maybeSingle();
+
+  if (existingError) {
+    throw existingError;
+  }
+
+  const { error } = existingEvidence
+    ? await supabase
+        .from("inspeccion_evidencias")
+        .update({ storage_path: storagePath })
+        .eq("id", existingEvidence.id)
+    : await supabase.from("inspeccion_evidencias").insert({
+        inspeccion_id: params.inspectionId,
+        tipo: params.evidenceType,
+        storage_path: storagePath
+      });
+
+  if (error) {
+    throw error;
+  }
+
+  return storagePath;
 }
 
 async function uploadPdfDocument(params: {
@@ -207,7 +252,24 @@ export async function regeneratePreoperationalPdf(params: { inspectionId: string
   const evidenceValues: Partial<Record<EvidenceType, EvidenceUploadState>> = {};
 
   for (const evidence of evidences) {
-    evidenceValues[evidence.tipo as EvidenceType] = await downloadStoredEvidence(evidence.storage_path);
+    const evidenceType = evidence.tipo as EvidenceType;
+    const downloadedEvidence = await downloadStoredEvidence(evidence.storage_path);
+    const normalizedFile = downloadedEvidence.file
+      ? await normalizeEvidenceImage(downloadedEvidence.file)
+      : undefined;
+    const normalizedEvidence = normalizedFile
+      ? { ...downloadedEvidence, fileName: normalizedFile.name, file: normalizedFile }
+      : downloadedEvidence;
+
+    if (normalizedFile && normalizedFile !== downloadedEvidence.file && evidenceType !== "FIRMA_CONDUCTOR") {
+      await replaceInspectionEvidence({
+        inspectionId: inspection.id,
+        evidenceType,
+        evidence: normalizedEvidence
+      });
+    }
+
+    evidenceValues[evidenceType] = normalizedEvidence;
   }
 
   const pdfBytes = await generatePreoperationalPdf({

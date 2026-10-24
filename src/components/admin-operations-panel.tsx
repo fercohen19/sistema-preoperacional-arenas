@@ -3,8 +3,10 @@
 import { useEffect, useMemo, useState } from "react";
 import { contractRecords, findContractByNumber } from "@/lib/contracts";
 import { buildValidationUrl } from "@/lib/document-utils";
-import { regeneratePreoperationalPdf } from "@/lib/preoperational";
+import { normalizeEvidenceImage } from "@/lib/image-normalization";
+import { regeneratePreoperationalPdf, replaceInspectionEvidence } from "@/lib/preoperational";
 import { supabase } from "@/lib/supabase";
+import type { EvidenceType } from "@/lib/types";
 
 type InspectionRecord = {
   id: string;
@@ -54,6 +56,16 @@ type FuecView = FuecRecord & {
   contractorName: string;
   contractorDocument: string;
 };
+
+const repairEvidenceOptions: Array<{
+  value: Exclude<EvidenceType, "FIRMA_CONDUCTOR">;
+  label: string;
+}> = [
+  { value: "FOTO_FRONTAL", label: "Foto frontal" },
+  { value: "FOTO_TRASERA", label: "Foto trasera" },
+  { value: "FOTO_TABLERO_KM", label: "Foto tablero KM" },
+  { value: "FOTO_ELEMENTOS_SEGURIDAD", label: "Elementos de seguridad" }
+];
 
 function formatDateTime(value: string | null) {
   if (!value) {
@@ -169,6 +181,11 @@ export function AdminOperationsPanel() {
   const [isLoading, setIsLoading] = useState(true);
   const [isExporting, setIsExporting] = useState(false);
   const [retryingInspectionId, setRetryingInspectionId] = useState<string | null>(null);
+  const [repairingInspectionId, setRepairingInspectionId] = useState<string | null>(null);
+  const [repairEvidenceType, setRepairEvidenceType] = useState<
+    Exclude<EvidenceType, "FIRMA_CONDUCTOR">
+  >("FOTO_FRONTAL");
+  const [repairFile, setRepairFile] = useState<File | null>(null);
   const [loadError, setLoadError] = useState("");
   const [operationMessage, setOperationMessage] = useState("");
 
@@ -434,6 +451,37 @@ export function AdminOperationsPanel() {
           : "No fue posible regenerar el PDF del preoperacional.";
       setLoadError(message);
     } finally {
+      setRetryingInspectionId(null);
+    }
+  }
+
+  async function handleRepairInspectionEvidence(inspection: InspectionView) {
+    if (!repairFile) {
+      setLoadError("Selecciona la foto que deseas reemplazar.");
+      return;
+    }
+
+    setRetryingInspectionId(inspection.id);
+    setLoadError("");
+    setOperationMessage("Corrigiendo evidencia y preparando el PDF...");
+
+    try {
+      const normalizedFile = await normalizeEvidenceImage(repairFile);
+      await replaceInspectionEvidence({
+        inspectionId: inspection.id,
+        evidenceType: repairEvidenceType,
+        evidence: {
+          fileName: normalizedFile.name,
+          file: normalizedFile
+        }
+      });
+      setRepairingInspectionId(null);
+      setRepairFile(null);
+      await handleRetryInspectionPdf(inspection);
+    } catch (error) {
+      setLoadError(
+        error instanceof Error ? error.message : "No fue posible reemplazar la evidencia."
+      );
       setRetryingInspectionId(null);
     }
   }
@@ -712,6 +760,54 @@ export function AdminOperationsPanel() {
                           : "Reintentar PDF"}
                       </button>
                     )}
+                    {!pdfHref && repairingInspectionId === inspection.id ? (
+                      <div className="admin-evidence-repair">
+                        <select
+                          aria-label="Evidencia a reemplazar"
+                          className="select-field"
+                          onChange={(event) =>
+                            setRepairEvidenceType(
+                              event.target.value as Exclude<EvidenceType, "FIRMA_CONDUCTOR">
+                            )
+                          }
+                          value={repairEvidenceType}
+                        >
+                          {repairEvidenceOptions.map((option) => (
+                            <option key={option.value} value={option.value}>
+                              {option.label}
+                            </option>
+                          ))}
+                        </select>
+                        <input
+                          accept="image/*"
+                          onChange={(event) => setRepairFile(event.target.files?.[0] ?? null)}
+                          type="file"
+                        />
+                        <button
+                          className="secondary-button admin-link-button"
+                          disabled={retryingInspectionId === inspection.id || !repairFile}
+                          onClick={() => void handleRepairInspectionEvidence(inspection)}
+                          type="button"
+                        >
+                          Guardar foto y PDF
+                        </button>
+                      </div>
+                    ) : !pdfHref ? (
+                      <button
+                        className="secondary-button admin-link-button"
+                        disabled={retryingInspectionId === inspection.id}
+                        onClick={() => {
+                          setRepairingInspectionId(inspection.id);
+                          setRepairEvidenceType("FOTO_FRONTAL");
+                          setRepairFile(null);
+                          setLoadError("");
+                          setOperationMessage("");
+                        }}
+                        type="button"
+                      >
+                        Corregir foto
+                      </button>
+                    ) : null}
                   </div>
                 </div>
               );

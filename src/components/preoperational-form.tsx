@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { SignaturePad } from "@/components/signature-pad";
 import { checklistItems, requiredEvidence } from "@/lib/checklist";
 import { evaluateInspectionResult, missingRequiredEvidence } from "@/lib/inspection";
+import { normalizeEvidenceImage } from "@/lib/image-normalization";
 import { savePreoperationalInspection } from "@/lib/preoperational";
 import { mockDrivers, mockVehicles } from "@/lib/mock-data";
 import { useCurrentAppUser } from "@/lib/current-user";
@@ -124,6 +125,35 @@ export function PreoperationalForm() {
         [itemCode]: nextValues.join(" | ")
       };
     });
+  };
+
+  const handleEvidenceFileChange = async (
+    evidenceType: EvidenceType,
+    selectedFile?: File
+  ) => {
+    if (!selectedFile) {
+      return;
+    }
+
+    try {
+      setStatusMessage(
+        selectedFile.name.toLowerCase().endsWith(".heic") || selectedFile.type === "image/heic"
+          ? "Convirtiendo foto HEIC a JPG..."
+          : ""
+      );
+      const file = await normalizeEvidenceImage(selectedFile);
+
+      setEvidenceValues((current) => ({
+        ...current,
+        [evidenceType]: {
+          fileName: file.name,
+          file
+        }
+      }));
+      setStatusMessage(file !== selectedFile ? "Foto HEIC convertida a JPG correctamente." : "");
+    } catch (error) {
+      setStatusMessage(error instanceof Error ? error.message : "No fue posible cargar la foto.");
+    }
   };
 
   return (
@@ -329,17 +359,11 @@ export function PreoperationalForm() {
                 <input
                   accept="image/*"
                   className="file-input"
-                  onChange={(event) =>
-                    setEvidenceValues((current) => ({
-                      ...current,
-                      [evidence.codigo]: event.target.files?.[0]
-                        ? {
-                            fileName: event.target.files[0].name,
-                            file: event.target.files[0]
-                          }
-                        : current[evidence.codigo]
-                    }))
-                  }
+                  onChange={(event) => {
+                    const selectedFile = event.target.files?.[0];
+                    event.target.value = "";
+                    void handleEvidenceFileChange(evidence.codigo, selectedFile);
+                  }}
                   type="file"
                 />
               </label>
