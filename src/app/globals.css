@@ -508,6 +508,59 @@ h3 {
   width: 100%;
 }
 
+.maintenance-header,
+.section-title-row,
+.maintenance-record {
+  display: flex;
+  gap: 18px;
+  justify-content: space-between;
+  align-items: end;
+}
+
+.maintenance-header p,
+.section-title-row p {
+  margin-bottom: 0;
+}
+
+.maintenance-vehicle-select {
+  width: min(100%, 290px);
+}
+
+.maintenance-profile-grid,
+.maintenance-form-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.maintenance-description {
+  grid-column: span 2;
+}
+
+.maintenance-history {
+  display: grid;
+  gap: 10px;
+}
+
+.maintenance-record {
+  align-items: start;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.52);
+}
+
+.maintenance-record p {
+  margin: 6px 0 0;
+}
+
+.maintenance-record__meta {
+  display: grid;
+  gap: 5px;
+  min-width: 150px;
+  color: var(--muted);
+  font-size: 0.9rem;
+  text-align: right;
+}
+
 .admin-alert {
   margin: 0;
   padding: 14px 16px;
@@ -609,6 +662,29 @@ h3 {
 
   .admin-history-actions {
     justify-items: start;
+  }
+
+  .maintenance-header,
+  .section-title-row,
+  .maintenance-record {
+    display: grid;
+  }
+
+  .maintenance-vehicle-select {
+    width: 100%;
+  }
+
+  .maintenance-profile-grid,
+  .maintenance-form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .maintenance-description {
+    grid-column: auto;
+  }
+
+  .maintenance-record__meta {
+    text-align: left;
   }
 
   .hero-card,

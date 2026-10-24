@@ -20,12 +20,14 @@ export function MainNav() {
       ? [
           { href: "/" as Route, label: "Inicio" },
           { href: "/admin" as Route, label: "Administrador" },
-          { href: "/admin/fuec" as Route, label: "FUEC" }
+          { href: "/admin/fuec" as Route, label: "FUEC" },
+          { href: "/admin/mantenimientos" as Route, label: "Mantenimientos" }
         ]
       : user?.rol === "conductor"
         ? [
             { href: "/" as Route, label: "Inicio" },
-            { href: "/conductor" as Route, label: "Conductor" }
+            { href: "/conductor" as Route, label: "Conductor" },
+            { href: "/conductor/mantenimientos" as Route, label: "Mantenimientos" }
           ]
         : publicLinks;
 
