@@ -18,6 +18,27 @@ async function dataUrlToBlob(dataUrl: string) {
   return response.blob();
 }
 
+function toArrayRecord<T>(value: T | T[] | null | undefined) {
+  if (!value) {
+    return [] as T[];
+  }
+
+  return Array.isArray(value) ? value : [value];
+}
+
+function splitStoragePath(storagePath: string) {
+  const [bucket, ...rest] = storagePath.split("/");
+
+  if (!bucket || rest.length === 0) {
+    throw new Error(`La ruta de evidencia ${storagePath} no es valida.`);
+  }
+
+  return {
+    bucket,
+    path: rest.join("/")
+  };
+}
+
 async function uploadEvidenceFile(params: {
   inspectionId: string;
   evidenceType: EvidenceType;
@@ -83,6 +104,148 @@ async function uploadPdfDocument(params: {
   }
 
   return path;
+}
+
+async function persistInspectionPdfReferences(params: {
+  inspectionId: string;
+  verificationCode: string;
+  pdfPath: string;
+}) {
+  if (!supabase) {
+    throw new Error("Supabase no esta configurado.");
+  }
+
+  const pdfUrl = `documentos/${params.pdfPath}`;
+
+  const { error: pdfUpdateError } = await supabase
+    .from("inspecciones_preoperacionales")
+    .update({
+      pdf_url: pdfUrl,
+      updated_at: new Date().toISOString()
+    })
+    .eq("id", params.inspectionId);
+
+  if (pdfUpdateError) {
+    throw pdfUpdateError;
+  }
+
+  const { error: documentUpdateError } = await supabase
+    .from("documentos_verificables")
+    .update({
+      pdf_url: pdfUrl
+    })
+    .eq("codigo_verificacion", params.verificationCode);
+
+  if (documentUpdateError) {
+    throw documentUpdateError;
+  }
+
+  return pdfUrl;
+}
+
+async function downloadStoredEvidence(storagePath: string) {
+  if (!supabase) {
+    throw new Error("Supabase no esta configurado.");
+  }
+
+  const { bucket, path } = splitStoragePath(storagePath);
+  const { data, error } = await supabase.storage.from(bucket).download(path);
+
+  if (error || !data) {
+    throw error ?? new Error(`No fue posible descargar la evidencia ${storagePath}.`);
+  }
+
+  const fileName = path.split("/").pop() || "evidencia";
+  const file = new File([data], fileName, {
+    type: data.type || (bucket === "firmas" ? "image/png" : "image/jpeg")
+  });
+
+  return {
+    fileName,
+    file
+  } satisfies EvidenceUploadState;
+}
+
+export async function regeneratePreoperationalPdf(params: { inspectionId: string }) {
+  if (!supabase) {
+    throw new Error("Supabase no esta configurado.");
+  }
+
+  const { data: inspection, error: inspectionError } = await supabase
+    .from("inspecciones_preoperacionales")
+    .select(
+      "id, codigo, fecha_operacion, kilometraje, observaciones, resultado, codigo_verificacion, vehiculos(placa, tipo_vehiculo, propietario_afiliado), conductores(documento, nombre_completo), inspeccion_items(item_codigo, valor), inspeccion_evidencias(tipo, storage_path)"
+    )
+    .eq("id", params.inspectionId)
+    .single();
+
+  if (inspectionError || !inspection) {
+    throw new Error("No fue posible cargar la inspeccion para regenerar el PDF.");
+  }
+
+  if (!inspection.codigo_verificacion) {
+    throw new Error("La inspeccion no tiene codigo de verificacion y no se puede regenerar el PDF.");
+  }
+
+  if (!inspection.resultado) {
+    throw new Error("La inspeccion no tiene resultado final y no se puede regenerar el PDF.");
+  }
+
+  const vehicle = toArrayRecord(inspection.vehiculos)[0];
+  const driver = toArrayRecord(inspection.conductores)[0];
+  const items = toArrayRecord(inspection.inspeccion_items);
+  const evidences = toArrayRecord(inspection.inspeccion_evidencias);
+
+  if (!vehicle || !driver) {
+    throw new Error("La inspeccion no tiene vehiculo o conductor asociado.");
+  }
+
+  const itemValues = Object.fromEntries(
+    items.map((item: any) => [item.item_codigo, item.valor ?? ""])
+  ) as Record<string, string>;
+
+  const evidenceValues: Partial<Record<EvidenceType, EvidenceUploadState>> = {};
+
+  for (const evidence of evidences) {
+    evidenceValues[evidence.tipo as EvidenceType] = await downloadStoredEvidence(evidence.storage_path);
+  }
+
+  const pdfBytes = await generatePreoperationalPdf({
+    code: inspection.codigo,
+    verificationCode: inspection.codigo_verificacion,
+    vehicle: {
+      placa: vehicle.placa,
+      tipoVehiculo: vehicle.tipo_vehiculo ?? "Vehiculo",
+      propietarioAfiliado: vehicle.propietario_afiliado ?? ""
+    },
+    driver: {
+      documento: driver.documento,
+      nombreCompleto: driver.nombre_completo ?? driver.documento
+    },
+    kilometraje: inspection.kilometraje,
+    observaciones: inspection.observaciones ?? "",
+    resultado: inspection.resultado as InspectionResult,
+    itemValues,
+    evidenceValues,
+    fechaOperacion: inspection.fecha_operacion
+  });
+
+  const pdfPath = await uploadPdfDocument({
+    inspectionId: inspection.id,
+    pdfBytes
+  });
+
+  await persistInspectionPdfReferences({
+    inspectionId: inspection.id,
+    verificationCode: inspection.codigo_verificacion,
+    pdfPath
+  });
+
+  return {
+    code: inspection.codigo,
+    pdfPath,
+    pdfUrl: `documentos/${pdfPath}`
+  };
 }
 
 export async function savePreoperationalInspection(params: {
@@ -228,9 +391,7 @@ export async function savePreoperationalInspection(params: {
     es_falla_critica: item.critico
   }));
 
-  const { error: itemsError } = await supabase
-    .from("inspeccion_items")
-    .insert(itemsPayload);
+  const { error: itemsError } = await supabase.from("inspeccion_items").insert(itemsPayload);
 
   if (itemsError) {
     throw itemsError;
@@ -313,28 +474,11 @@ export async function savePreoperationalInspection(params: {
       pdfBytes
     });
 
-    const { error: pdfUpdateError } = await supabase
-      .from("inspecciones_preoperacionales")
-      .update({
-        pdf_url: `documentos/${pdfPath}`,
-        updated_at: new Date().toISOString()
-      })
-      .eq("id", inspectionId);
-
-    if (pdfUpdateError) {
-      throw pdfUpdateError;
-    }
-
-    const { error: documentUpdateError } = await supabase
-      .from("documentos_verificables")
-      .update({
-        pdf_url: `documentos/${pdfPath}`
-      })
-      .eq("codigo_verificacion", verificationCode);
-
-    if (documentUpdateError) {
-      throw documentUpdateError;
-    }
+    await persistInspectionPdfReferences({
+      inspectionId,
+      verificationCode,
+      pdfPath
+    });
 
     pdfGenerated = true;
   } catch (error) {

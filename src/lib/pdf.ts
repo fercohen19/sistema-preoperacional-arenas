@@ -30,6 +30,95 @@ async function evidenceToBytes(evidence: EvidenceUploadState) {
   return null;
 }
 
+function detectImageFormat(imageBytes: Uint8Array, evidence?: EvidenceUploadState) {
+  const mimeType = evidence?.file?.type?.toLowerCase() ?? "";
+  const fileName = evidence?.fileName?.toLowerCase() ?? "";
+
+  if (
+    imageBytes.length >= 8 &&
+    imageBytes[0] === 0x89 &&
+    imageBytes[1] === 0x50 &&
+    imageBytes[2] === 0x4e &&
+    imageBytes[3] === 0x47
+  ) {
+    return "png" as const;
+  }
+
+  if (imageBytes.length >= 2 && imageBytes[0] === 0xff && imageBytes[1] === 0xd8) {
+    return "jpg" as const;
+  }
+
+  if (mimeType === "image/png" || fileName.endsWith(".png")) {
+    return "png" as const;
+  }
+
+  if (mimeType === "image/jpeg" || mimeType === "image/jpg" || fileName.endsWith(".jpg") || fileName.endsWith(".jpeg")) {
+    return "jpg" as const;
+  }
+
+  return "unknown" as const;
+}
+
+async function convertImageBytesToPng(imageBytes: Uint8Array, evidence?: EvidenceUploadState) {
+  const mimeType = evidence?.file?.type || "image/*";
+  const imageBuffer = imageBytes.buffer.slice(
+    imageBytes.byteOffset,
+    imageBytes.byteOffset + imageBytes.byteLength
+  ) as ArrayBuffer;
+  const blob = new Blob([imageBuffer], { type: mimeType });
+  const objectUrl = URL.createObjectURL(blob);
+
+  try {
+    const image = new Image();
+    image.decoding = "async";
+    image.src = objectUrl;
+    await image.decode();
+
+    const canvas = document.createElement("canvas");
+    canvas.width = image.naturalWidth || image.width;
+    canvas.height = image.naturalHeight || image.height;
+
+    const context = canvas.getContext("2d");
+    if (!context) {
+      throw new Error("No fue posible preparar el lienzo para convertir la imagen.");
+    }
+
+    context.drawImage(image, 0, 0);
+
+    const pngBlob = await new Promise<Blob | null>((resolve) => {
+      canvas.toBlob((value) => resolve(value), "image/png");
+    });
+
+    if (!pngBlob) {
+      throw new Error("No fue posible convertir la imagen a PNG.");
+    }
+
+    const arrayBuffer = await pngBlob.arrayBuffer();
+    return new Uint8Array(arrayBuffer);
+  } catch {
+    throw new Error(
+      `La evidencia ${evidence?.fileName ?? "adjunta"} no esta en un formato compatible para el PDF. Usa una foto JPG o PNG tomada directamente desde la camara o galeria.`
+    );
+  } finally {
+    URL.revokeObjectURL(objectUrl);
+  }
+}
+
+async function embedEvidenceImage(pdfDoc: PDFDocument, evidence: EvidenceUploadState, imageBytes: Uint8Array) {
+  const detectedFormat = detectImageFormat(imageBytes, evidence);
+
+  if (detectedFormat === "png") {
+    return pdfDoc.embedPng(imageBytes);
+  }
+
+  if (detectedFormat === "jpg") {
+    return pdfDoc.embedJpg(imageBytes);
+  }
+
+  const normalizedPngBytes = await convertImageBytesToPng(imageBytes, evidence);
+  return pdfDoc.embedPng(normalizedPngBytes);
+}
+
 function truncate(text: string, max = 85) {
   return text.length > max ? `${text.slice(0, max - 3)}...` : text;
 }
@@ -258,9 +347,7 @@ async function drawEvidenceImage(params: {
     return;
   }
 
-  const image = evidence.fileName.toLowerCase().endsWith(".png")
-    ? await pdfDoc.embedPng(imageBytes)
-    : await pdfDoc.embedJpg(imageBytes);
+  const image = await embedEvidenceImage(pdfDoc, evidence, imageBytes);
 
   page.drawImage(image, {
     x: x + 4,
@@ -618,3 +705,5 @@ export async function generatePreoperationalPdf(params: {
 
   return pdfDoc.save();
 }
+
+

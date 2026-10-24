@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { contractRecords, findContractByNumber } from "@/lib/contracts";
 import { buildValidationUrl } from "@/lib/document-utils";
+import { regeneratePreoperationalPdf } from "@/lib/preoperational";
 import { supabase } from "@/lib/supabase";
 
 type InspectionRecord = {
@@ -167,7 +168,9 @@ export function AdminOperationsPanel() {
   const [fuecPdfUrls, setFuecPdfUrls] = useState<SignedUrlMap>({});
   const [isLoading, setIsLoading] = useState(true);
   const [isExporting, setIsExporting] = useState(false);
+  const [retryingInspectionId, setRetryingInspectionId] = useState<string | null>(null);
   const [loadError, setLoadError] = useState("");
+  const [operationMessage, setOperationMessage] = useState("");
 
   useEffect(() => {
     async function loadAdminData() {
@@ -377,6 +380,64 @@ export function AdminOperationsPanel() {
     [fuecs, inspections]
   );
 
+  async function handleRetryInspectionPdf(inspection: InspectionView) {
+    if (!supabase) {
+      setLoadError("Supabase no esta configurado para regenerar el PDF.");
+      return;
+    }
+
+    setRetryingInspectionId(inspection.id);
+    setLoadError("");
+    setOperationMessage("");
+
+    try {
+      const regenerated = await regeneratePreoperationalPdf({
+        inspectionId: inspection.id
+      });
+
+      const storagePath = extractStoragePath(regenerated.pdfUrl);
+      let signedUrl = "";
+
+      if (storagePath) {
+        const { data, error } = await supabase.storage
+          .from("documentos")
+          .createSignedUrl(storagePath, 3600);
+
+        if (!error) {
+          signedUrl = data.signedUrl;
+        }
+      }
+
+      setInspections((current) =>
+        current.map((item) =>
+          item.id === inspection.id
+            ? {
+                ...item,
+                pdf_url: regenerated.pdfUrl
+              }
+            : item
+        )
+      );
+
+      if (storagePath && signedUrl) {
+        setInspectionPdfUrls((current) => ({
+          ...current,
+          [storagePath]: signedUrl
+        }));
+      }
+
+      setOperationMessage(`PDF regenerado correctamente para ${regenerated.code}.`);
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "No fue posible regenerar el PDF del preoperacional.";
+      setLoadError(message);
+    } finally {
+      setRetryingInspectionId(null);
+    }
+  }
+
   async function exportRowsToExcel(
     kind: "preoperacionales" | "fuecs",
     rows: InspectionView[] | FuecView[]
@@ -503,6 +564,7 @@ export function AdminOperationsPanel() {
         </article>
       </div>
 
+      {operationMessage ? <p className="admin-alert">{operationMessage}</p> : null}
       {loadError ? <p className="admin-alert admin-alert--danger">{loadError}</p> : null}
       {isLoading ? <p className="muted">Cargando historial administrativo...</p> : null}
 
@@ -639,7 +701,16 @@ export function AdminOperationsPanel() {
                         Abrir PDF
                       </a>
                     ) : (
-                      <span className="muted">Sin PDF</span>
+                      <button
+                        className="primary-button admin-link-button"
+                        disabled={retryingInspectionId === inspection.id}
+                        onClick={() => void handleRetryInspectionPdf(inspection)}
+                        type="button"
+                      >
+                        {retryingInspectionId === inspection.id
+                          ? "Reintentando..."
+                          : "Reintentar PDF"}
+                      </button>
                     )}
                   </div>
                 </div>
@@ -791,3 +862,4 @@ export function AdminOperationsPanel() {
     </div>
   );
 }
+
