@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -6,7 +6,6 @@ export const metadata: Metadata = {
   description: "Sistema de preoperacional y FUEC",
   applicationName: "Arenas Transporte y Turismo",
   manifest: "/manifest.webmanifest",
-  themeColor: "#e9ae2b",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
@@ -16,6 +15,10 @@ export const metadata: Metadata = {
     icon: "/logo-arenas.png",
     apple: "/logo-arenas.png"
   }
+};
+
+export const viewport: Viewport = {
+  themeColor: "#0f2438"
 };
 
 export default function RootLayout({

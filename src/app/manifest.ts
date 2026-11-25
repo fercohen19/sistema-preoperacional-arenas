@@ -7,8 +7,8 @@ export default function manifest(): MetadataRoute.Manifest {
     description: "Sistema operativo de preoperacional y FUEC para conductores y administradores.",
     start_url: "/login",
     display: "standalone",
-    background_color: "#fcf8f1",
-    theme_color: "#e9ae2b",
+    background_color: "#f3f5f9",
+    theme_color: "#0f2438",
     lang: "es-CO",
     icons: [
       {

@@ -5,8 +5,8 @@ import { HomeEntryActions } from "@/components/home-entry-actions";
 export default function HomePage() {
   return (
     <AppShell
-      title="Preoperacional y FUEC"
-      subtitle="Preoperacional y FUEC en una sola operacion. Diligenciamiento en tiempo real y generacion automatica."
+      title="Operacion de transporte en un solo lugar"
+      subtitle="Servicios agendados, rutas con paradas y horarios, preoperacional, FUEC y mantenimientos de la flota."
     >
       <div className="stack-lg">
         <section className="brand-hero">
@@ -22,19 +22,23 @@ export default function HomePage() {
             </div>
             <div className="brand-hero__copy">
               <p className="brand-kicker">Arenas Transporte y Turismo</p>
-              <h2>Operacion digital en un solo flujo</h2>
+              <h2>Del agendamiento a la recogida</h2>
               <p>
-                El conductor diligencia el preoperacional, adjunta evidencias, firma
-                en pantalla y deja habilitado el FUEC solo cuando la inspeccion del
-                dia cumple las reglas del negocio.
+                Administracion agenda los servicios y asigna conductor y vehiculo. El
+                conductor ve su semana, hace el preoperacional, sigue la ruta con sus
+                paradas y marca cada recogida para dejar registro de puntualidad.
               </p>
             </div>
           </div>
 
           <div className="brand-highlight">
             <div className="brand-highlight__item">
-              <strong>Tiempo real</strong>
-              <span>Registro inmediato desde el celular.</span>
+              <strong>Agenda de servicios</strong>
+              <span>Conductor y vehiculo asignados, sin cruces de horario.</span>
+            </div>
+            <div className="brand-highlight__item">
+              <strong>Rutas optimizadas</strong>
+              <span>Orden de paradas por menor recorrido y hora de paso.</span>
             </div>
             <div className="brand-highlight__item">
               <strong>PDF automatico</strong>

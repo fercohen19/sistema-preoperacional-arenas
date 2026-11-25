@@ -1,6 +1,6 @@
+import Link from "next/link";
 import { AppShell } from "@/components/app-shell";
 import { AuthGuard } from "@/components/auth-guard";
-import { DashboardCards } from "@/components/dashboard-cards";
 import { DriverFuecDownloads } from "@/components/driver-fuec-downloads";
 import { PreoperationalForm } from "@/components/preoperational-form";
 import { SystemBanner } from "@/components/system-banner";
@@ -8,16 +8,21 @@ import { SystemBanner } from "@/components/system-banner";
 export default function DriverDashboardPage() {
   return (
     <AppShell
-      title="Panel del conductor"
-      subtitle="Formulario movil para diligenciar la inspeccion, adjuntar evidencias, firmar y generar automaticamente el PDF del preoperacional."
+      eyebrow="Conductor"
+      title="Preoperacional del dia"
+      subtitle="Diligencia la inspeccion, adjunta las evidencias y firma. Al cerrar se genera el PDF y, si el resultado es apto, administracion puede emitir el FUEC."
     >
       <AuthGuard requiredRole="conductor">
         <div className="stack-lg">
           <SystemBanner
-            title="Formulario operativo"
-            description="El resultado ya se calcula en pantalla y se valida que existan evidencias obligatorias. Lo siguiente es persistir los datos y emitir el PDF automaticamente."
+            title="Antes del primer servicio"
+            description="El preoperacional se hace una vez al dia por vehiculo. El resultado se calcula en pantalla y se exigen las fotos y la firma."
           />
-          <DashboardCards />
+          <div className="action-row">
+            <Link className="ghost-button small-button" href="/conductor/servicios">
+              Ver mis servicios de la semana
+            </Link>
+          </div>
           <PreoperationalForm />
           <DriverFuecDownloads />
         </div>

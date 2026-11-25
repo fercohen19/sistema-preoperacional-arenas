@@ -1,4 +1,5 @@
 "use client";
+import { StatusPill } from "@/components/status-pill";
 
 import { useEffect, useMemo, useState } from "react";
 import { contractRecords, findContractByNumber } from "@/lib/contracts";
@@ -724,7 +725,7 @@ export function AdminOperationsPanel() {
                     </p>
                   </div>
                   <div className="admin-history-meta">
-                    <span className="status-pill">{inspection.resultado ?? "PENDIENTE"}</span>
+                    <StatusPill value={inspection.resultado ?? "PENDIENTE"} />
                     <span className="muted">KM {inspection.kilometraje}</span>
                     <span className="muted">{formatDateTime(inspection.fecha_hora_cierre)}</span>
                   </div>
@@ -922,7 +923,7 @@ export function AdminOperationsPanel() {
                     </p>
                   </div>
                   <div className="admin-history-meta">
-                    <span className="status-pill">{fuec.estado}</span>
+                    <StatusPill value={fuec.estado} />
                     <span className="muted">{formatDateTime(fuec.fecha_emision)}</span>
                   </div>
                   <div className="admin-history-actions">

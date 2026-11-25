@@ -1,4 +1,5 @@
 "use client";
+import { StatusPill } from "@/components/status-pill";
 
 import { useEffect, useMemo, useState } from "react";
 import { getBogotaDate } from "@/lib/date-utils";
@@ -153,7 +154,7 @@ export function PendingFuecQueue() {
                   </p>
                 </div>
                 <div>
-                  <span className="status-pill">{inspection.resultado ?? "PENDIENTE"}</span>
+                  <StatusPill value={inspection.resultado ?? "PENDIENTE"} />
                   <p className="muted">{formatDateTime(inspection.fecha_hora_cierre)}</p>
                 </div>
               </div>

@@ -13,12 +13,12 @@ export function HomeEntryActions() {
   if (user?.rol === "conductor") {
     return (
       <div className="home-actions-card__buttons">
-        <Link className="primary-button home-primary" href="/conductor">
-          Ir a mi preoperacional
+        <Link className="primary-button home-primary" href="/conductor/servicios">
+          Ver mis servicios
         </Link>
         <div className="home-secondary-actions">
-          <Link className="secondary-button" href="/validar/DEMO-2026-000001">
-            Validar documento
+          <Link className="secondary-button" href="/conductor">
+            Preoperacional del dia
           </Link>
         </div>
       </div>
@@ -32,11 +32,14 @@ export function HomeEntryActions() {
           Ir al panel administrativo
         </Link>
         <div className="home-secondary-actions">
-          <Link className="secondary-button" href="/admin/fuec">
-            Ir a FUEC
+          <Link className="secondary-button" href="/admin/servicios">
+            Agenda de servicios
           </Link>
-          <Link className="secondary-button" href="/validar/DEMO-2026-000001">
-            Validar documento
+          <Link className="secondary-button" href="/admin/rutas">
+            Rutas
+          </Link>
+          <Link className="secondary-button" href="/admin/fuec">
+            FUEC
           </Link>
         </div>
       </div>
@@ -48,11 +51,6 @@ export function HomeEntryActions() {
       <Link className="primary-button home-primary" href="/login">
         Ingresar al sistema
       </Link>
-      <div className="home-secondary-actions">
-        <Link className="secondary-button" href="/validar/DEMO-2026-000001">
-          Validar documento
-        </Link>
-      </div>
     </div>
   );
 }

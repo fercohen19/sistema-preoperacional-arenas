@@ -1,4 +1,5 @@
 "use client";
+import { StatusPill } from "@/components/status-pill";
 
 import { useEffect, useState } from "react";
 import { buildValidationUrl } from "@/lib/document-utils";
@@ -188,7 +189,7 @@ export function DriverFuecDownloads() {
                     </p>
                   </div>
                   <div className="admin-history-meta">
-                    <span className="status-pill">{record.estado}</span>
+                    <StatusPill value={record.estado} />
                   </div>
                   <div className="admin-history-actions">
                     {record.codigo_verificacion ? (
