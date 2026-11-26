@@ -18,6 +18,8 @@ const adminLinks: NavLink[] = [
   { href: "/admin" as Route, label: "Panel", icon: "dashboard" },
   { href: "/admin/servicios" as Route, label: "Servicios", icon: "calendar" },
   { href: "/admin/rutas" as Route, label: "Rutas", icon: "route" },
+  { href: "/admin/flota" as Route, label: "Flota", icon: "truck" },
+  { href: "/admin/finanzas" as Route, label: "Costos", icon: "money" },
   { href: "/admin/fuec" as Route, label: "FUEC", icon: "file" },
   { href: "/admin/mantenimientos" as Route, label: "Mantenimientos", icon: "wrench" }
 ];

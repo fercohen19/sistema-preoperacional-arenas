@@ -273,3 +273,88 @@ export async function loadCurrentDriverId(documento: string) {
   const { data } = await supabase.from("conductores").select("id").eq("documento", documento).maybeSingle();
   return (data?.id as string | undefined) ?? null;
 }
+
+// ---------------------------------------------------------------------
+// Finanzas
+// ---------------------------------------------------------------------
+
+export type PaymentStatus = "PENDIENTE" | "PAGADO" | "NO_APLICA";
+
+export interface ServiceFinanceRecord {
+  servicio_id: string;
+  valor_servicio: number;
+  costo_conductor: number;
+  costo_peajes: number;
+  peajes_cantidad: number;
+  otros_costos: number;
+  estado_pago: PaymentStatus;
+  fecha_pago: string | null;
+  factura_numero: string | null;
+  notas: string | null;
+}
+
+export const FINANCE_COLUMNS =
+  "servicio_id, valor_servicio, costo_conductor, costo_peajes, peajes_cantidad, otros_costos, estado_pago, fecha_pago, factura_numero, notas";
+
+export function normalizeFinance(row: Partial<ServiceFinanceRecord> & { servicio_id: string }): ServiceFinanceRecord {
+  return {
+    servicio_id: row.servicio_id,
+    valor_servicio: Number(row.valor_servicio ?? 0),
+    costo_conductor: Number(row.costo_conductor ?? 0),
+    costo_peajes: Number(row.costo_peajes ?? 0),
+    peajes_cantidad: Number(row.peajes_cantidad ?? 0),
+    otros_costos: Number(row.otros_costos ?? 0),
+    estado_pago: (row.estado_pago as PaymentStatus) ?? "PENDIENTE",
+    fecha_pago: row.fecha_pago ?? null,
+    factura_numero: row.factura_numero ?? null,
+    notas: row.notas ?? null
+  };
+}
+
+export function directCosts(finance: Pick<ServiceFinanceRecord, "costo_conductor" | "costo_peajes" | "otros_costos"> | undefined) {
+  if (!finance) return 0;
+  return Number(finance.costo_conductor) + Number(finance.costo_peajes) + Number(finance.otros_costos);
+}
+
+const copFormatter = new Intl.NumberFormat("es-CO", { style: "currency", currency: "COP", maximumFractionDigits: 0 });
+
+export function formatCOP(value: number | null | undefined) {
+  return copFormatter.format(Number(value ?? 0));
+}
+
+/** Convierte "470.000", "$ 1.220.000" o "470000" en numero. */
+export function parseMoney(text: string) {
+  const digits = text.replace(/[^\d]/g, "");
+  return digits ? Number(digits) : 0;
+}
+
+export function moneyInput(value: number) {
+  return value ? new Intl.NumberFormat("es-CO", { maximumFractionDigits: 0 }).format(value) : "";
+}
+
+export async function loadFinancesFor(serviceIds: string[]) {
+  const map: Record<string, ServiceFinanceRecord> = {};
+  if (!supabase || !serviceIds.length) return map;
+  for (let index = 0; index < serviceIds.length; index += 150) {
+    const { data } = await supabase
+      .from("servicio_finanzas")
+      .select(FINANCE_COLUMNS)
+      .in("servicio_id", serviceIds.slice(index, index + 150));
+    (data ?? []).forEach((row) => {
+      map[row.servicio_id as string] = normalizeFinance(row as ServiceFinanceRecord);
+    });
+  }
+  return map;
+}
+
+export async function loadActiveAssignments() {
+  if (!supabase) return [] as Array<{ id: string; vehiculo_id: string; conductor_id: string; fecha_inicio: string }>;
+  const today = todayBogota();
+  const { data } = await supabase
+    .from("asignaciones_vehiculo_conductor")
+    .select("id, vehiculo_id, conductor_id, fecha_inicio, fecha_fin, activa")
+    .eq("activa", true);
+  return ((data ?? []) as Array<{ id: string; vehiculo_id: string; conductor_id: string; fecha_inicio: string; fecha_fin: string | null }>).filter(
+    (row) => !row.fecha_fin || row.fecha_fin >= today
+  );
+}

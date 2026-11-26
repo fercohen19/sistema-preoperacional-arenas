@@ -38,6 +38,12 @@ export function HomeEntryActions() {
           <Link className="secondary-button" href="/admin/rutas">
             Rutas
           </Link>
+          <Link className="secondary-button" href="/admin/flota">
+            Flota
+          </Link>
+          <Link className="secondary-button" href="/admin/finanzas">
+            Costos y gastos
+          </Link>
           <Link className="secondary-button" href="/admin/fuec">
             FUEC
           </Link>

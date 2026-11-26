@@ -20,7 +20,9 @@ export type IconName =
   | "clipboard"
   | "login"
   | "pin"
-  | "users";
+  | "users"
+  | "money"
+  | "truck";
 
 const paths: Record<IconName, React.ReactNode> = {
   home: <path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z" />,
@@ -63,6 +65,20 @@ const paths: Record<IconName, React.ReactNode> = {
     <>
       <path d="M12 21s7-6.1 7-11.5A7 7 0 0 0 5 9.5C5 14.9 12 21 12 21z" />
       <circle cx="12" cy="9.5" r="2.5" />
+    </>
+  ),
+  money: (
+    <>
+      <rect x="2.5" y="6" width="19" height="12" rx="2" />
+      <circle cx="12" cy="12" r="2.8" />
+      <path d="M6 9.5v5M18 9.5v5" />
+    </>
+  ),
+  truck: (
+    <>
+      <path d="M3 6h11v10H3zM14 9h4l3 3.5V16h-7" />
+      <circle cx="7" cy="17.5" r="1.8" />
+      <circle cx="17" cy="17.5" r="1.8" />
     </>
   ),
   users: (

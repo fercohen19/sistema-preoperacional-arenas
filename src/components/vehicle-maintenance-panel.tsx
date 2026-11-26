@@ -51,6 +51,7 @@ type MaintenanceDraft = {
   kilometrajeActual: string;
   proximaFecha: string;
   proximoKilometraje: string;
+  costo: string;
 };
 
 const defaultDraft = (): MaintenanceDraft => ({
@@ -61,7 +62,8 @@ const defaultDraft = (): MaintenanceDraft => ({
   lugar: "",
   kilometrajeActual: "",
   proximaFecha: "",
-  proximoKilometraje: ""
+  proximoKilometraje: "",
+  costo: ""
 });
 
 function formatDate(value: string | null) {
@@ -260,7 +262,8 @@ export function VehicleMaintenancePanel({ role = "administrador" }: { role?: "ad
         lugar: draft.lugar.trim() || null,
         kilometraje_actual: kilometrajeActual,
         proxima_fecha: draft.proximaFecha || null,
-        proximo_kilometraje: proximoKilometraje
+        proximo_kilometraje: proximoKilometraje,
+        ...(draft.costo.replace(/\D/g, "") ? { costo: Number(draft.costo.replace(/\D/g, "")) } : {})
       })
       .select("id, vehiculo_id, fecha, tipo, asunto, descripcion, lugar, kilometraje_actual, proxima_fecha, proximo_kilometraje")
       .single();
@@ -368,6 +371,7 @@ export function VehicleMaintenancePanel({ role = "administrador" }: { role?: "ad
             <label className="field"><span>Tipo</span><select className="select-field" onChange={(event) => setDraft((current) => ({ ...current, tipo: event.target.value as MaintenanceDraft["tipo"] }))} value={draft.tipo}><option value="PREVENTIVO">Preventivo</option><option value="CORRECTIVO">Correctivo</option></select></label>
             <label className="field"><span>Asunto</span><input onChange={(event) => setDraft((current) => ({ ...current, asunto: event.target.value }))} placeholder="Ej: Cambio de aceite" value={draft.asunto} /></label>
             <label className="field"><span>Lugar o taller</span><input onChange={(event) => setDraft((current) => ({ ...current, lugar: event.target.value }))} placeholder="Ej: Taller central" value={draft.lugar} /></label>
+            <label className="field"><span>Costo (opcional)</span><input inputMode="numeric" onChange={(event) => { const digits = event.target.value.replace(/\D/g, ""); setDraft((current) => ({ ...current, costo: digits ? new Intl.NumberFormat("es-CO").format(Number(digits)) : "" })); }} placeholder="$ 0" value={draft.costo} /></label>
             <label className="field"><span>Kilometraje actual</span><input inputMode="numeric" onChange={(event) => setDraft((current) => ({ ...current, kilometrajeActual: event.target.value }))} value={draft.kilometrajeActual} /></label>
             <label className="field"><span>Proxima fecha</span><input onChange={(event) => setDraft((current) => ({ ...current, proximaFecha: event.target.value }))} type="date" value={draft.proximaFecha} /></label>
             <label className="field"><span>Proximo kilometraje</span><input inputMode="numeric" onChange={(event) => setDraft((current) => ({ ...current, proximoKilometraje: event.target.value }))} value={draft.proximoKilometraje} /></label>

@@ -415,6 +415,7 @@ h3 {
 .stack-md {
   display: grid;
   gap: 14px;
+  align-content: start;
 }
 
 .stack-sm {
@@ -1908,6 +1909,240 @@ h3 {
 
 .empty-state strong {
   color: var(--ink);
+}
+
+/* ---------------------------------------------------------------------
+   Sincronizacion, dinero y finanzas
+   --------------------------------------------------------------------- */
+
+.service-card__money {
+  font-weight: 800;
+  color: var(--ok);
+  font-variant-numeric: tabular-nums;
+}
+
+.sync-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.88rem;
+  color: var(--muted);
+}
+
+.sync-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #a0aab5;
+}
+
+.sync-dot--ok {
+  background: var(--ok);
+}
+
+.sync-dot--warn {
+  background: var(--gold);
+}
+
+.sync-dot--danger {
+  background: var(--danger);
+}
+
+.sync-dot--running {
+  background: var(--sea);
+  animation: pulse-dot 1.2s infinite;
+}
+
+.link-button {
+  border: 0;
+  background: none;
+  padding: 0;
+  color: var(--ink-3);
+  font-weight: 700;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.finance-box {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+  border-radius: var(--radius-md);
+  background: linear-gradient(135deg, #f2fbf6, var(--surface) 60%);
+  border: 1px solid #cfeadb;
+}
+
+.money-input {
+  display: flex;
+  align-items: center;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-sm);
+  background: var(--surface-strong);
+  padding-left: 12px;
+}
+
+.money-input:focus-within {
+  border-color: var(--sea);
+  box-shadow: 0 0 0 3px rgba(13, 138, 143, 0.16);
+}
+
+.money-input span {
+  color: var(--muted);
+  font-weight: 700;
+}
+
+.field .money-input input {
+  border: 0;
+  box-shadow: none;
+  padding-left: 6px;
+  font-variant-numeric: tabular-nums;
+}
+
+.setup-steps {
+  margin: 0;
+  padding-left: 20px;
+  display: grid;
+  gap: 6px;
+  color: var(--text);
+  font-size: 0.92rem;
+}
+
+.num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.positive {
+  color: var(--ok);
+}
+
+.negative {
+  color: var(--danger);
+}
+
+.data-table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+}
+
+.data-table-wrap .summary-table th,
+.data-table-wrap .summary-table td {
+  white-space: nowrap;
+}
+
+.summary-table tbody tr.is-clickable {
+  cursor: pointer;
+}
+
+.summary-table tbody tr.is-clickable:hover td {
+  background: var(--surface-muted);
+}
+
+.summary-table tfoot td {
+  font-weight: 800;
+  border-top: 2px solid var(--line-strong);
+  padding: 11px 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.bar-list {
+  display: grid;
+  gap: 10px;
+}
+
+.bar-list__row {
+  display: grid;
+  grid-template-columns: 150px minmax(0, 1fr) 120px;
+  gap: 10px;
+  align-items: center;
+  font-size: 0.9rem;
+}
+
+.bar-list__track {
+  height: 10px;
+  border-radius: 999px;
+  background: #eef1f5;
+  overflow: hidden;
+}
+
+.bar-list__track > span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--coral);
+}
+
+.person-card {
+  display: grid;
+  gap: 10px;
+  padding: 16px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--line);
+  background: var(--surface);
+  transition: border-color 0.2s var(--ease), box-shadow 0.2s var(--ease);
+}
+
+.person-card:hover {
+  border-color: var(--line-strong);
+  box-shadow: var(--shadow-sm);
+}
+
+.person-card.is-inactive {
+  opacity: 0.6;
+  background: var(--surface-muted);
+}
+
+.person-card__head {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+.avatar {
+  display: inline-grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, var(--ink-2), var(--sea));
+  color: #fff;
+  font-weight: 800;
+  flex-shrink: 0;
+}
+
+.avatar--vehicle {
+  background: linear-gradient(135deg, var(--gold), var(--coral));
+  color: var(--ink);
+}
+
+.cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 12px;
+}
+
+.chip-remove {
+  border: 0;
+  background: none;
+  color: var(--muted);
+  cursor: pointer;
+  padding: 0 0 0 2px;
+  font-weight: 800;
+}
+
+.chip-remove:hover {
+  color: var(--danger);
+}
+
+@media (max-width: 900px) {
+  .bar-list__row {
+    grid-template-columns: 100px minmax(0, 1fr) 100px;
+  }
 }
 
 /* ---------------------------------------------------------------------

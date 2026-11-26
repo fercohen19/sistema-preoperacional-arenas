@@ -4,7 +4,19 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { contractRecords } from "@/lib/contracts";
 import { useCurrentAppUser } from "@/lib/current-user";
 import { parseCalendarFile, type CalendarOccurrence } from "@/lib/ics-import";
-import { addMinutesToTime } from "@/lib/services";
+import { authedFetch } from "@/lib/api-client";
+import {
+  addMinutesToTime,
+  FINANCE_COLUMNS,
+  formatCOP,
+  loadActiveAssignments,
+  loadFinancesFor,
+  moneyInput,
+  normalizeFinance,
+  parseMoney,
+  type PaymentStatus,
+  type ServiceFinanceRecord
+} from "@/lib/services";
 import {
   addDays,
   dayLabel,
@@ -31,7 +43,7 @@ import {
 import { supabase } from "@/lib/supabase";
 import { StatusPill } from "./status-pill";
 
-type Tab = "agenda" | "resumen" | "importar";
+type Tab = "agenda" | "resumen" | "calendar";
 
 type Draft = {
   id: string;
@@ -49,7 +61,22 @@ type Draft = {
   vehiculo_id: string;
   conductor_id: string;
   estado: ServiceStatus;
+  valor: string;
+  costo_conductor: string;
+  peajes_cantidad: string;
+  costo_peajes: string;
+  otros_costos: string;
+  estado_pago: PaymentStatus;
 };
+
+const financeDraft = (finance?: ServiceFinanceRecord) => ({
+  valor: moneyInput(finance?.valor_servicio ?? 0),
+  costo_conductor: moneyInput(finance?.costo_conductor ?? 0),
+  peajes_cantidad: finance?.peajes_cantidad ? String(finance.peajes_cantidad) : "",
+  costo_peajes: moneyInput(finance?.costo_peajes ?? 0),
+  otros_costos: moneyInput(finance?.otros_costos ?? 0),
+  estado_pago: finance?.estado_pago ?? ("PENDIENTE" as PaymentStatus)
+});
 
 const emptyDraft = (fecha: string): Draft => ({
   id: "",
@@ -66,11 +93,13 @@ const emptyDraft = (fecha: string): Draft => ({
   ruta_id: "",
   vehiculo_id: "",
   conductor_id: "",
-  estado: "PROGRAMADO"
+  estado: "PROGRAMADO",
+  ...financeDraft()
 });
 
-function draftFromService(service: ServiceRecord): Draft {
+function draftFromService(service: ServiceRecord, finance?: ServiceFinanceRecord): Draft {
   return {
+    ...financeDraft(finance),
     id: service.id,
     fecha: service.fecha,
     hora_inicio: hhmm(service.hora_inicio),
@@ -123,6 +152,13 @@ export function ServicesAdminPanel() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [message, setMessage] = useState<{ tone: "ok" | "danger" | "warn"; text: string } | null>(null);
+  const [finances, setFinances] = useState<Record<string, ServiceFinanceRecord>>({});
+  const [assignments, setAssignments] = useState<Array<{ vehiculo_id: string; conductor_id: string }>>([]);
+  const [syncState, setSyncState] = useState<{ running: boolean; text: string; tone: "ok" | "warn" | "danger" | "muted" }>({
+    running: false,
+    text: "",
+    tone: "muted"
+  });
   const today = todayBogota();
   const days = useMemo(() => weekDays(weekStart), [weekStart]);
 
@@ -130,6 +166,7 @@ export function ServicesAdminPanel() {
     setIsLoading(true);
     const { data, error } = await loadServicesBetween(weekStart, addDays(weekStart, 6));
     setServices(data);
+    setFinances(await loadFinancesFor(data.map((service) => service.id)));
     if (error) setMessage({ tone: "danger", text: error });
     setIsLoading(false);
   }, [weekStart]);
@@ -138,11 +175,53 @@ export function ServicesAdminPanel() {
     void loadWeek();
   }, [loadWeek]);
 
+  const runCalendarSync = useCallback(
+    async (origen: "MANUAL" | "AUTOMATICA") => {
+      setSyncState({ running: true, text: "Sincronizando con Google Calendar...", tone: "muted" });
+      const { data, status } = await authedFetch<{
+        ok?: boolean;
+        omitida?: boolean;
+        configurado?: boolean;
+        mensaje?: string;
+        creados?: number;
+        actualizados?: number;
+        cancelados?: number;
+        errores?: string[];
+      }>("/api/calendar-sync", { method: "POST", body: JSON.stringify({ origen }) });
+      if (status === 400 && data.configurado === false) {
+        setSyncState({ running: false, text: "Google Calendar aun no esta enlazado.", tone: "warn" });
+        return;
+      }
+      if (!data.ok) {
+        setSyncState({ running: false, text: data.mensaje ?? "No fue posible sincronizar.", tone: "danger" });
+        return;
+      }
+      if (data.omitida) {
+        setSyncState({ running: false, text: "Google Calendar al dia.", tone: "ok" });
+        return;
+      }
+      const changes = (data.creados ?? 0) + (data.actualizados ?? 0) + (data.cancelados ?? 0);
+      setSyncState({
+        running: false,
+        text: `Google Calendar sincronizado: ${data.creados ?? 0} nuevos, ${data.actualizados ?? 0} actualizados, ${data.cancelados ?? 0} cancelados${data.errores?.length ? `, ${data.errores.length} con error` : ""}.`,
+        tone: data.errores?.length ? "warn" : "ok"
+      });
+      if (changes) void loadWeek();
+    },
+    [loadWeek]
+  );
+
+  // Al abrir la agenda se sincroniza (el servidor la omite si se hizo hace menos de 10 min).
+  useEffect(() => {
+    void runCalendarSync("AUTOMATICA");
+  }, [runCalendarSync]);
+
   useEffect(() => {
     async function loadCatalogs() {
       const fleet = await loadFleetOptions();
       setDrivers(fleet.drivers);
       setVehicles(fleet.vehicles);
+      setAssignments(await loadActiveAssignments());
       if (supabase) {
         const { data } = await supabase.from("rutas").select(ROUTE_COLUMNS).eq("activa", true).order("nombre");
         setRoutes((data ?? []) as RouteRecord[]);
@@ -270,13 +349,41 @@ export function ServicesAdminPanel() {
       return;
     }
     const saved = result.data as ServiceRecord;
+    const financeRow = {
+      servicio_id: saved.id,
+      valor_servicio: parseMoney(draft.valor),
+      costo_conductor: parseMoney(draft.costo_conductor),
+      peajes_cantidad: Number(draft.peajes_cantidad) || 0,
+      costo_peajes: parseMoney(draft.costo_peajes),
+      otros_costos: parseMoney(draft.otros_costos),
+      estado_pago: draft.estado_pago,
+      updated_at: new Date().toISOString()
+    };
+    const hasFinance =
+      finances[saved.id] ||
+      financeRow.valor_servicio ||
+      financeRow.costo_conductor ||
+      financeRow.costo_peajes ||
+      financeRow.otros_costos;
+    if (hasFinance) {
+      const financeResult = await supabase.from("servicio_finanzas").upsert(financeRow).select(FINANCE_COLUMNS).single();
+      if (financeResult.error) {
+        setMessage({ tone: "warn", text: `El servicio se guardo, pero no el valor: ${friendlyDbError(financeResult.error.message)}` });
+      } else if (financeResult.data) {
+        setFinances((current) => ({ ...current, [saved.id]: normalizeFinance(financeResult.data as ServiceFinanceRecord) }));
+      }
+    }
     setServices((current) =>
       [...current.filter((service) => service.id !== saved.id), saved].sort((a, b) =>
         `${a.fecha}${a.hora_inicio}`.localeCompare(`${b.fecha}${b.hora_inicio}`)
       )
     );
     setDraft(null);
-    setMessage({ tone: "ok", text: draft.id ? "Servicio actualizado." : "Servicio agendado y visible para el conductor." });
+    setMessage((current) =>
+      current?.tone === "warn" && current.text.startsWith("El servicio se guardo")
+        ? current
+        : { tone: "ok", text: draft.id ? "Servicio actualizado." : "Servicio agendado y visible para el conductor." }
+    );
   };
 
   const deleteService = async () => {
@@ -300,15 +407,31 @@ export function ServicesAdminPanel() {
     let ok = 0;
     const errors: string[] = [];
     for (const service of source) {
-      const { error } = await supabase.from("servicios").insert({
-        ...draftToRow(draftFromService(service)),
-        fecha: addDays(service.fecha, 7),
-        estado: "PROGRAMADO",
-        origen_registro: "MANUAL",
-        creado_por: null
-      });
-      if (error) errors.push(`${service.titulo}: ${friendlyDbError(error.message)}`);
-      else ok += 1;
+      const { data: copied, error } = await supabase
+        .from("servicios")
+        .insert({
+          ...draftToRow(draftFromService(service)),
+          fecha: addDays(service.fecha, 7),
+          estado: "PROGRAMADO",
+          origen_registro: "MANUAL"
+        })
+        .select("id")
+        .single();
+      if (error || !copied) errors.push(`${service.titulo}: ${friendlyDbError(error?.message)}`);
+      else {
+        ok += 1;
+        const finance = finances[service.id];
+        if (finance) {
+          await supabase.from("servicio_finanzas").insert({
+            servicio_id: copied.id,
+            valor_servicio: finance.valor_servicio,
+            costo_conductor: finance.costo_conductor,
+            costo_peajes: finance.costo_peajes,
+            peajes_cantidad: finance.peajes_cantidad,
+            otros_costos: finance.otros_costos
+          });
+        }
+      }
     }
     setMessage({
       tone: errors.length ? "warn" : "ok",
@@ -358,12 +481,24 @@ export function ServicesAdminPanel() {
         </p>
       ) : null}
 
+      {syncState.text ? (
+        <div className="sync-line">
+          <span className={`sync-dot sync-dot--${syncState.running ? "running" : syncState.tone}`} />
+          <span>{syncState.text}</span>
+          {!syncState.running ? (
+            <button className="link-button" onClick={() => (syncState.tone === "warn" && syncState.text.includes("enlazado") ? setTab("calendar") : void runCalendarSync("MANUAL"))} type="button">
+              {syncState.tone === "warn" && syncState.text.includes("enlazado") ? "Como enlazarlo" : "Sincronizar ahora"}
+            </button>
+          ) : null}
+        </div>
+      ) : null}
+
       <div className="tabs" role="tablist">
         {(
           [
             ["agenda", "Agenda semanal"],
             ["resumen", "Resumen por conductor"],
-            ["importar", "Importar Google Calendar"]
+            ["calendar", "Google Calendar"]
           ] as Array<[Tab, string]>
         ).map(([key, label]) => (
           <button className={tab === key ? "tab is-active" : "tab"} key={key} onClick={() => setTab(key)} role="tab" type="button">
@@ -372,7 +507,7 @@ export function ServicesAdminPanel() {
         ))}
       </div>
 
-      {tab !== "importar" ? (
+      {tab !== "calendar" ? (
         <div className="toolbar">
           <button className="icon-button" onClick={() => setWeekStart(addDays(weekStart, -7))} title="Semana anterior" type="button">
             ‹
@@ -435,7 +570,7 @@ export function ServicesAdminPanel() {
                       <button
                         className={`service-card service-card--${service.estado}${unassigned && service.estado === "PROGRAMADO" ? " service-card--unassigned" : ""}`}
                         key={service.id}
-                        onClick={() => setDraft(draftFromService(service))}
+                        onClick={() => setDraft(draftFromService(service, finances[service.id]))}
                         type="button"
                       >
                         <span className="service-card__time">
@@ -449,6 +584,9 @@ export function ServicesAdminPanel() {
                           {service.ruta_id ? " · Ruta" : ""}
                           {service.origen_registro === "GOOGLE_CALENDAR" ? " · Calendar" : ""}
                         </span>
+                        {finances[service.id]?.valor_servicio ? (
+                          <span className="service-card__money">{formatCOP(finances[service.id].valor_servicio)}</span>
+                        ) : null}
                       </button>
                     );
                   })}
@@ -540,7 +678,11 @@ export function ServicesAdminPanel() {
         </div>
       ) : null}
 
-      {tab === "importar" ? (
+      {tab === "calendar" ? (
+        <CalendarSyncCard onSync={() => void runCalendarSync("MANUAL")} syncState={syncState} />
+      ) : null}
+
+      {tab === "calendar" ? (
         <CalendarImport
           drivers={drivers}
           onImported={(count) => {
@@ -597,7 +739,19 @@ export function ServicesAdminPanel() {
               </label>
               <label className="field">
                 <span>Conductor</span>
-                <select className="select-field" onChange={(event) => setDraft({ ...draft, conductor_id: event.target.value })} value={draft.conductor_id}>
+                <select
+                  className="select-field"
+                  onChange={(event) => {
+                    const conductorId = event.target.value;
+                    const assigned = assignments.filter((row) => row.conductor_id === conductorId);
+                    setDraft({
+                      ...draft,
+                      conductor_id: conductorId,
+                      vehiculo_id: draft.vehiculo_id || (assigned.length === 1 ? assigned[0].vehiculo_id : "")
+                    });
+                  }}
+                  value={draft.conductor_id}
+                >
                   <option value="">Sin asignar</option>
                   {drivers.map((driver) => (
                     <option key={driver.id} value={driver.id}>
@@ -662,6 +816,36 @@ export function ServicesAdminPanel() {
               </label>
             </div>
 
+            <div className="finance-box">
+              <div className="section-title-row">
+                <div>
+                  <p className="eyebrow">Valor y costos (solo administradores)</p>
+                  <strong>
+                    Margen: {formatCOP(parseMoney(draft.valor) - parseMoney(draft.costo_conductor) - parseMoney(draft.costo_peajes) - parseMoney(draft.otros_costos))}
+                  </strong>
+                </div>
+              </div>
+              <div className="form-grid">
+                <MoneyField label="Valor del servicio" onChange={(value) => setDraft({ ...draft, valor: value })} value={draft.valor} />
+                <MoneyField label="Conductor + aux. transporte" onChange={(value) => setDraft({ ...draft, costo_conductor: value })} value={draft.costo_conductor} />
+                <label className="field">
+                  <span>Estado de pago</span>
+                  <select className="select-field" onChange={(event) => setDraft({ ...draft, estado_pago: event.target.value as PaymentStatus })} value={draft.estado_pago}>
+                    <option value="PENDIENTE">Por cobrar</option>
+                    <option value="PAGADO">Pagado</option>
+                    <option value="NO_APLICA">No aplica</option>
+                  </select>
+                </label>
+                <label className="field">
+                  <span>Cantidad de peajes</span>
+                  <input inputMode="numeric" onChange={(event) => setDraft({ ...draft, peajes_cantidad: event.target.value.replace(/\D/g, "") })} value={draft.peajes_cantidad} />
+                </label>
+                <MoneyField label="Valor peajes" onChange={(value) => setDraft({ ...draft, costo_peajes: value })} value={draft.costo_peajes} />
+                <MoneyField label="Otros costos del servicio" onChange={(value) => setDraft({ ...draft, otros_costos: value })} value={draft.otros_costos} />
+              </div>
+              <p className="field-hint">El combustible se registra aparte en Costos y gastos (por tanqueo y vehiculo).</p>
+            </div>
+
             {conflicts.length ? (
               <div className="conflict-box">
                 <strong>Cruce de horario.</strong>{" "}
@@ -690,6 +874,104 @@ export function ServicesAdminPanel() {
           </aside>
         </div>
       ) : null}
+    </div>
+  );
+}
+
+export function MoneyField({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) {
+  return (
+    <label className="field">
+      <span>{label}</span>
+      <div className="money-input">
+        <span>$</span>
+        <input
+          inputMode="numeric"
+          onChange={(event) => onChange(moneyInput(parseMoney(event.target.value)))}
+          placeholder="0"
+          value={value}
+        />
+      </div>
+    </label>
+  );
+}
+
+function CalendarSyncCard({
+  syncState,
+  onSync
+}: {
+  syncState: { running: boolean; text: string; tone: string };
+  onSync: () => void;
+}) {
+  const [history, setHistory] = useState<
+    Array<{ id: string; iniciado_at: string; origen: string; ok: boolean; creados: number; actualizados: number; cancelados: number; mensaje: string | null; errores: string[] }>
+  >([]);
+
+  useEffect(() => {
+    if (!supabase || syncState.running) return;
+    void supabase
+      .from("calendario_sincronizaciones")
+      .select("id, iniciado_at, origen, ok, creados, actualizados, cancelados, mensaje, errores")
+      .order("iniciado_at", { ascending: false })
+      .limit(6)
+      .then(({ data }) => setHistory((data ?? []) as typeof history));
+  }, [syncState.running]);
+
+  const linked = !(syncState.tone === "warn" && syncState.text.includes("enlazado"));
+
+  return (
+    <div className="grid-two two-columns">
+      <article className="table-card stack-md">
+        <div className="section-title-row">
+          <div>
+            <p className="eyebrow">Sincronizacion automatica</p>
+            <h2>{linked ? "Google Calendar enlazado" : "Enlazar Google Calendar"}</h2>
+          </div>
+          <span className={`status-pill ${linked ? "status-pill--ok" : "status-pill--warn"}`}>{linked ? "Activo" : "Pendiente"}</span>
+        </div>
+        <p className="muted">
+          Los eventos del calendario de servicios se convierten en servicios de la agenda: al abrir esta pagina, con el boton y de
+          forma programada. Si cambias la hora en Google, se actualiza aqui; si borras el evento, el servicio futuro se cancela.
+          Lo que ya inicio o se completo no se toca.
+        </p>
+        <p className="muted">
+          Escribe en la descripcion del evento <strong>Valor: 470.000</strong>, <strong>Conductor: Nombre</strong>,{" "}
+          <strong>Placa: ABC123</strong> o <strong>Pasajeros: 12</strong> y se llenan solos al crear el servicio.
+        </p>
+        <div className="action-row">
+          <button className="primary-button" disabled={syncState.running || !linked} onClick={onSync} type="button">
+            {syncState.running ? "Sincronizando..." : "Sincronizar ahora"}
+          </button>
+        </div>
+        {!linked ? (
+          <ol className="setup-steps">
+            <li>En Google Calendar (computador) abre Configuracion del calendario de servicios.</li>
+            <li>En “Integrar el calendario” copia la <strong>Direccion secreta en formato iCal</strong>.</li>
+            <li>En Vercel → Settings → Environment Variables crea GOOGLE_CALENDAR_ICS_URL con esa direccion, mas SUPABASE_SERVICE_ROLE_KEY y CRON_SECRET.</li>
+            <li>Vuelve a publicar el sistema (Redeploy).</li>
+          </ol>
+        ) : null}
+      </article>
+      <article className="table-card stack-md">
+        <div>
+          <p className="eyebrow">Historial</p>
+          <h2>Ultimas sincronizaciones</h2>
+        </div>
+        {history.length === 0 ? <p className="muted">Aun no hay sincronizaciones registradas.</p> : null}
+        {history.map((row) => (
+          <div className="table-row compact" key={row.id}>
+            <div>
+              <strong>
+                {new Date(row.iniciado_at).toLocaleString("es-CO", { timeZone: "America/Bogota", dateStyle: "short", timeStyle: "short" })}
+              </strong>
+              <p className="muted">{row.mensaje ?? "En proceso"}</p>
+              {row.errores?.length ? <p className="muted">{row.errores.slice(0, 2).join(" | ")}</p> : null}
+            </div>
+            <span className={`status-pill ${row.ok ? "status-pill--ok" : "status-pill--danger"}`}>
+              {row.origen === "CRON" ? "Programada" : row.origen === "AUTOMATICA" ? "Automatica" : "Manual"}
+            </span>
+          </div>
+        ))}
+      </article>
     </div>
   );
 }
@@ -841,9 +1123,9 @@ function CalendarImport({
   return (
     <div className="stack-md">
       <article className="banner">
-        <strong>Como traer los servicios de Google Calendar</strong>
+        <strong>Alternativa: importar un archivo .ics</strong>
         <p>
-          En Google Calendar (computador): Configuracion → Importar y exportar → Exportar. Se descarga un .zip con un
+          Util para cargar otro calendario o meses anteriores. En Google Calendar (computador): Configuracion → Importar y exportar → Exportar. Se descarga un .zip con un
           archivo .ics por calendario; descomprimelo y carga aqui el del calendario de servicios. Al volver a importar,
           los eventos ya cargados se omiten automaticamente.
         </p>

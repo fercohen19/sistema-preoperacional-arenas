@@ -38,7 +38,7 @@ export function useCurrentAppUser() {
 
       const { data } = await supabase
         .from("usuarios")
-        .select("rol, documento, nombre_completo")
+        .select("rol, documento, nombre_completo, activo")
         .eq("auth_user_id", authUser.id)
         .maybeSingle();
 
@@ -47,7 +47,7 @@ export function useCurrentAppUser() {
       }
 
       setUser(
-        data
+        data && data.activo !== false
           ? {
               rol: data.rol,
               documento: data.documento ?? "",
